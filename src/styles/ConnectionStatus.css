@@ -1,0 +1,55 @@
+.connection-status {
+  padding: 12px 16px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  font-size: 14px;
+}
+
+.connection-status.connected {
+  background-color: #e8f8f0;
+  border-color: #27ae60;
+}
+
+.connection-status.disconnected {
+  background-color: #fdeaea;
+  border-color: #e74c3c;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.connection-status.connected .status-indicator {
+  color: #27ae60;
+}
+
+.connection-status.disconnected .status-indicator {
+  color: #e74c3c;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #999;
+  transition: all 0.3s;
+}
+
+.status-dot.active {
+  background-color: #27ae60;
+  box-shadow: 0 0 10px rgba(39, 174, 96, 0.5);
+}
+
+.error-text {
+  color: #e74c3c;
+  font-size: 12px;
+  margin-left: auto;
+}
