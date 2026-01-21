@@ -7,6 +7,7 @@ import { BuildingFloorPlan } from './components/BuildingFloorPlan';
 import { FloorSelector } from './components/FloorSelector';
 import { RoomDetails } from './components/RoomDetails';
 import { ConnectionStatus } from './components/ConnectionStatus';
+import { SimulationPanel } from './components/SimulationPanel';
 import './App.css';
 
 // Sample building data - Updated based on evacuation plans
@@ -18,8 +19,8 @@ const SAMPLE_BUILDING: FloorPlan[] = [
     height: 250,
     rooms: [
       {
-        id: 'WC__1',
-        name: 'WC_1',
+        id: 'WC_RDC_1',
+        name: 'WC-RDC-1',
         x: 20,
         y: 7,
         width: 2,
@@ -161,12 +162,12 @@ const SAMPLE_BUILDING: FloorPlan[] = [
         lastUpdate: new Date().toISOString(),
       }, 
       {
-        id: 'WC_2',
-        name: 'WC_2',
+        id: 'WC_RDC_2',
+        name: 'WC-RDC-2',
         x: 10,
         y: 0,
         width: 2,
-               height: 5,
+        height: 5,
         occupied: true,
         temperature: 21,
         lastUpdate: new Date().toISOString(),
@@ -269,8 +270,8 @@ const SAMPLE_BUILDING: FloorPlan[] = [
         lastUpdate: new Date().toISOString(),
       },
       {
-        id: 'WC_1',
-        name: 'WC_1',
+        id: 'WC-E1-2',
+        name: 'WC-E1-2',
         x: 11,
         y: 0,
         width: 2,
@@ -401,8 +402,8 @@ const SAMPLE_BUILDING: FloorPlan[] = [
         lastUpdate: new Date().toISOString(),
       },
       {
-        id: 'WC_2',
-        name: 'WC_2',
+        id: 'WC_E1_1',
+        name: 'WC-E1-1',
         x: 23,
         y: 8,
         width: 2.5,
@@ -493,6 +494,7 @@ function App() {
             isConnecting={isConnecting}
             error={mqttError}
           />
+          <SimulationPanel />
           <FloorSelector
             floors={floorPlans}
             selectedFloorId={selectedFloor}

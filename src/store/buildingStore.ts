@@ -14,7 +14,7 @@ interface BuildingStore extends BuildingState {
 
 export const useBuildingStore = create<BuildingStore>((set, get) => ({
   floorPlans: [],
-  selectedFloor: null,
+  selectedFloor: localStorage.getItem('selectedFloor') || null,
   sensorData: new Map(),
   isConnected: false,
   error: null,
@@ -22,12 +22,19 @@ export const useBuildingStore = create<BuildingStore>((set, get) => ({
   setFloorPlans: (plans: FloorPlan[]) => {
     set({ floorPlans: plans });
     if (plans.length > 0 && !get().selectedFloor) {
-      set({ selectedFloor: plans[0].id });
+      const firstFloorId = plans[0].id;
+      set({ selectedFloor: firstFloorId });
+      localStorage.setItem('selectedFloor', firstFloorId);
     }
   },
 
   setSelectedFloor: (floorId: string | null) => {
     set({ selectedFloor: floorId });
+    if (floorId) {
+      localStorage.setItem('selectedFloor', floorId);
+    } else {
+      localStorage.removeItem('selectedFloor');
+    }
   },
 
   updateSensorData: (roomId: string, data: SensorData) => {

@@ -1,0 +1,62 @@
+.simulation-panel {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  color: Black;
+}
+
+.simulation-panel h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.simulation-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.simulation-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #4ade80;
+  color: White ;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.simulation-btn:hover {
+  
+  transform: translateY(-2px);
+}
+
+.simulation-btn.active {
+  background-color: #de4a4a;
+  color: white;
+}
+
+.simulation-btn.simulate-once {
+  background-color: rgba(255, 193, 7, 0.8);
+}
+
+.simulation-btn.simulate-once:hover {
+  background-color: rgba(255, 193, 7, 1);
+}
+
+.simulation-status {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
