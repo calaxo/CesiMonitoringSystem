@@ -1,22 +1,8 @@
 import { create } from 'zustand';
-import type { BuildingState, FloorPlan, SensorData, Room } from '../types';
-
-interface BuildingStore extends BuildingState {
-  setFloorPlans: (plans: FloorPlan[]) => void;
-  setSelectedFloor: (floorId: string | null) => void;
-  updateSensorData: (roomId: string, data: SensorData) => void;
-  setConnectionStatus: (isConnected: boolean) => void;
-  setError: (error: string | null) => void;
-  getRoomData: (roomId: string) => SensorData | undefined;
-  getSelectedFloorRooms: () => Room[];
-  clearSensorData: () => void;
-  getSensorHistory: (roomId: string) => SensorData[];
-  setActiveTab: (tab: 'dashboard' | 'kpi') => void;
-}
 
 const MAX_HISTORY_SIZE = 1000;
 
-export const useBuildingStore = create<BuildingStore>((set, get) => ({
+export const useBuildingStore = create((set, get) => ({
   floorPlans: [],
   selectedFloor: localStorage.getItem('selectedFloor') || null,
   sensorData: new Map(),
@@ -25,7 +11,7 @@ export const useBuildingStore = create<BuildingStore>((set, get) => ({
   error: null,
   activeTab: 'dashboard',
 
-  setFloorPlans: (plans: FloorPlan[]) => {
+  setFloorPlans: (plans) => {
     set({ floorPlans: plans });
     if (plans.length > 0 && !get().selectedFloor) {
       const firstFloorId = plans[0].id;
@@ -34,7 +20,7 @@ export const useBuildingStore = create<BuildingStore>((set, get) => ({
     }
   },
 
-  setSelectedFloor: (floorId: string | null) => {
+  setSelectedFloor: (floorId) => {
     set({ selectedFloor: floorId });
     if (floorId) {
       localStorage.setItem('selectedFloor', floorId);
@@ -43,7 +29,7 @@ export const useBuildingStore = create<BuildingStore>((set, get) => ({
     }
   },
 
-  updateSensorData: (roomId: string, data: SensorData) => {
+  updateSensorData: (roomId, data) => {
     const currentData = get().sensorData;
     const newData = new Map(currentData);
     newData.set(roomId, data);
@@ -61,15 +47,15 @@ export const useBuildingStore = create<BuildingStore>((set, get) => ({
     set({ sensorData: newData, sensorHistory: newHistory });
   },
 
-  setConnectionStatus: (isConnected: boolean) => {
+  setConnectionStatus: (isConnected) => {
     set({ isConnected });
   },
 
-  setError: (error: string | null) => {
+  setError: (error) => {
     set({ error });
   },
 
-  getRoomData: (roomId: string) => {
+  getRoomData: (roomId) => {
     return get().sensorData.get(roomId);
   },
 
@@ -83,11 +69,11 @@ export const useBuildingStore = create<BuildingStore>((set, get) => ({
     set({ sensorData: new Map(), sensorHistory: new Map() });
   },
 
-  getSensorHistory: (roomId: string) => {
+  getSensorHistory: (roomId) => {
     return get().sensorHistory.get(roomId) || [];
   },
 
-  setActiveTab: (tab: 'dashboard' | 'kpi') => {
+  setActiveTab: (tab) => {
     set({ activeTab: tab });
   },
 }));

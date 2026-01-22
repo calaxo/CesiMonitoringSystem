@@ -1,14 +1,6 @@
-import React from 'react';
-import type { FloorPlan } from '../types';
 import '../styles/FloorSelector.css';
 
-interface FloorSelectorProps {
-  floors: FloorPlan[];
-  selectedFloorId: string | null;
-  onSelectFloor: (floorId: string) => void;
-}
-
-export const FloorSelector: React.FC<FloorSelectorProps> = ({
+export const FloorSelector = ({
   floors,
   selectedFloorId,
   onSelectFloor,

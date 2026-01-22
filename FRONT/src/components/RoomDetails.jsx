@@ -1,13 +1,6 @@
-import React from 'react';
-import type { Room, SensorData } from '../types';
 import '../styles/RoomDetails.css';
 
-interface RoomDetailsProps {
-  rooms: Room[];
-  sensorData: Map<string, SensorData>;
-}
-
-export const RoomDetails: React.FC<RoomDetailsProps> = ({
+export const RoomDetails = ({
   rooms,
   sensorData,
 }) => {

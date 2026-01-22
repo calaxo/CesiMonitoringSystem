@@ -1,11 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { mqttService } from '../services/mqttService';
-import type { MQTTConfig } from '../types';
 import { useBuildingStore } from '../store/buildingStore';
 
-export const useMQTT = (config: MQTTConfig | null) => {
+export const useMQTT = (config) => {
   const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const { isConnected, setConnectionStatus, setError: setStoreError } =
     useBuildingStore();
 
@@ -35,7 +34,7 @@ export const useMQTT = (config: MQTTConfig | null) => {
   }, [setConnectionStatus]);
 
   const publish = useCallback(
-    (topic: string, message: any) => {
+    (topic, message) => {
       if (!isConnected) {
         setError('Not connected to MQTT broker');
         return;

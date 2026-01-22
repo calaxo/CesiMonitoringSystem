@@ -1,23 +1,15 @@
-import React from 'react';
-import type { Room, SensorData } from '../types';
 import '../styles/BuildingFloorPlan.css';
 
-interface BuildingFloorPlanProps {
-  rooms: Room[];
-  sensorData: Map<string, SensorData>;
-  floorName: string;
-}
-
-export const BuildingFloorPlan: React.FC<BuildingFloorPlanProps> = ({
+export const BuildingFloorPlan = ({
   rooms,
   sensorData,
   floorName,
 }) => {
-  const getRoomStatus = (roomId: string): SensorData | undefined => {
+  const getRoomStatus = (roomId) => {
     return sensorData.get(roomId);
   };
 
-  const getTemperatureColor = (temp: number): string => {
+  const getTemperatureColor = (temp) => {
     if (temp < 15) return '#4a90e2'; // Blue - Cold
     if (temp < 18) return '#7ed321'; // Green - Cool
     if (temp < 22) return '#f5a623'; // Orange - Normal
