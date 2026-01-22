@@ -47,7 +47,7 @@ jobs:
           node-version: 18
           cache: 'npm'
           cache-dependency-path: |
-            hutcvite/hutc-vite-app/package-lock.json
+            FRONT/package-lock.json
 
       - name: Install deps (Vite app)
         working-directory: hutcvite/hutc-vite-app

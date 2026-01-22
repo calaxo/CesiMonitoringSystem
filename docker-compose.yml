@@ -3,7 +3,7 @@ version: "3.8"
 services:
   back:
 
-    image: ghcr.io/MaximeLIRIO/CesiMonitoringSystem:latest
+    image: ghcr.io/calaxo/CesiMonitoringSystem:latest
     container_name: hutc-back
     environment:
       - NODE_ENV=production
