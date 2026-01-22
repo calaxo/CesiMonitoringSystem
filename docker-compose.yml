@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  back:
+
+    image: ghcr.io/MaximeLIRIO/CesiMonitoringSystem:latest
+    container_name: hutc-back
+    environment:
+      - NODE_ENV=production
+      - PORT=5500
+    ports:
+      - "5500:5500"
+    restart: unless-stopped
+    # Optionnel: pour itérer rapidement sur les assets sans rebuild l'image,
+    # montez le dossier local des assets dans le conteneur (lecture seule)
+    # volumes:
+    #   - ./BACK/assets:/app/assets:ro
