@@ -59,6 +59,17 @@
   min-width: 0;
 }
 
+.main-content-full {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 0;
+}
+
 .no-floor {
   display: flex;
   align-items: center;

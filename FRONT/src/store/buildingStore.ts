@@ -10,14 +10,20 @@ interface BuildingStore extends BuildingState {
   getRoomData: (roomId: string) => SensorData | undefined;
   getSelectedFloorRooms: () => Room[];
   clearSensorData: () => void;
+  getSensorHistory: (roomId: string) => SensorData[];
+  setActiveTab: (tab: 'dashboard' | 'kpi') => void;
 }
+
+const MAX_HISTORY_SIZE = 1000;
 
 export const useBuildingStore = create<BuildingStore>((set, get) => ({
   floorPlans: [],
   selectedFloor: localStorage.getItem('selectedFloor') || null,
   sensorData: new Map(),
+  sensorHistory: new Map(),
   isConnected: false,
   error: null,
+  activeTab: 'dashboard',
 
   setFloorPlans: (plans: FloorPlan[]) => {
     set({ floorPlans: plans });
@@ -41,7 +47,18 @@ export const useBuildingStore = create<BuildingStore>((set, get) => ({
     const currentData = get().sensorData;
     const newData = new Map(currentData);
     newData.set(roomId, data);
-    set({ sensorData: newData });
+    
+    // Ajoute à l'historique
+    const currentHistory = get().sensorHistory;
+    const newHistory = new Map(currentHistory);
+    const roomHistory = newHistory.get(roomId) || [];
+    roomHistory.push(data);
+    if (roomHistory.length > MAX_HISTORY_SIZE) {
+      roomHistory.shift();
+    }
+    newHistory.set(roomId, roomHistory);
+    
+    set({ sensorData: newData, sensorHistory: newHistory });
   },
 
   setConnectionStatus: (isConnected: boolean) => {
@@ -63,6 +80,14 @@ export const useBuildingStore = create<BuildingStore>((set, get) => ({
   },
 
   clearSensorData: () => {
-    set({ sensorData: new Map() });
+    set({ sensorData: new Map(), sensorHistory: new Map() });
+  },
+
+  getSensorHistory: (roomId: string) => {
+    return get().sensorHistory.get(roomId) || [];
+  },
+
+  setActiveTab: (tab: 'dashboard' | 'kpi') => {
+    set({ activeTab: tab });
   },
 }));

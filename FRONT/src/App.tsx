@@ -8,6 +8,8 @@ import { FloorSelector } from './components/FloorSelector';
 import { RoomDetails } from './components/RoomDetails';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { SimulationPanel } from './components/SimulationPanel';
+import { KPIStatsPanel } from './components/KPIStatsPanel';
+import { TabNavigation } from './components/TabNavigation';
 import './App.css';
 
 // Sample building data - Updated based on evacuation plans
@@ -479,6 +481,7 @@ function App() {
 
   const currentFloor = floorPlans.find((f) => f.id === selectedFloor);
   const currentRooms = currentFloor?.rooms || [];
+  const activeTab = useBuildingStore((state) => state.activeTab);
 
   return (
     <div className="app-container">
@@ -486,6 +489,8 @@ function App() {
         <h1>CESI Monitoring System</h1>
         <ConnectionStatus isConnected={isConnected} error={mqttError || error} />
       </header>
+
+      <TabNavigation />
 
       <div className="app-content">
         <aside className="sidebar">
@@ -495,27 +500,39 @@ function App() {
             error={mqttError}
           />
           <SimulationPanel />
-          <FloorSelector
-            floors={floorPlans}
-            selectedFloorId={selectedFloor}
-            onSelectFloor={handleFloorSelect}
-          />
-          <RoomDetails rooms={currentRooms} sensorData={sensorData} />
+          {activeTab === 'dashboard' && (
+            <>
+              <FloorSelector
+                floors={floorPlans}
+                selectedFloorId={selectedFloor}
+                onSelectFloor={handleFloorSelect}
+              />
+              <RoomDetails rooms={currentRooms} sensorData={sensorData} />
+            </>
+          )}
         </aside>
 
-        <main className="main-content">
-          {currentFloor ? (
-            <BuildingFloorPlan
-              rooms={currentRooms}
-              sensorData={sensorData}
-              floorName={currentFloor.name}
-            />
-          ) : (
-            <div className="no-floor">
-              <p>No floor selected. Please select a floor to view.</p>
-            </div>
-          )}
-        </main>
+        {activeTab === 'dashboard' && (
+          <main className="main-content">
+            {currentFloor ? (
+              <BuildingFloorPlan
+                rooms={currentRooms}
+                sensorData={sensorData}
+                floorName={currentFloor.name}
+              />
+            ) : (
+              <div className="no-floor">
+                <p>No floor selected. Please select a floor to view.</p>
+              </div>
+            )}
+          </main>
+        )}
+
+        {activeTab === 'kpi' && (
+          <main className="main-content-full">
+            <KPIStatsPanel />
+          </main>
+        )}
       </div>
 
       <footer className="app-footer">

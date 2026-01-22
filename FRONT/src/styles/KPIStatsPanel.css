@@ -1,0 +1,136 @@
+.kpi-stats-panel {
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.kpi-stats-panel h2 {
+  margin-top: 0;
+  color: #333;
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.kpi-stats-panel h3 {
+  color: #555;
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+
+.kpi-controls {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.control-group label {
+  font-weight: 600;
+  color: #333;
+  min-width: 70px;
+}
+
+.control-group select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.control-group select:hover {
+  border-color: #999;
+}
+
+.control-group select:focus {
+  outline: none;
+  border-color: #0088fe;
+  box-shadow: 0 0 0 2px rgba(0, 136, 254, 0.1);
+}
+
+.chart-container {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container h3 {
+  margin-top: 0;
+}
+
+.stats-summary {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.summary-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.summary-item {
+  padding: 12px;
+  background: #f9f9f9;
+  border-left: 4px solid #0088fe;
+  border-radius: 4px;
+}
+
+.summary-item strong {
+  display: block;
+  color: #555;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.summary-item span {
+  display: block;
+  color: #0088fe;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  background: white;
+  border-radius: 8px;
+  color: #999;
+}
+
+.no-data p {
+  margin: 0;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .kpi-controls {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .control-group {
+    width: 100%;
+  }
+
+  .summary-items {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-container {
+    padding: 10px;
+  }
+}

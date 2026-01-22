@@ -39,6 +39,8 @@ export interface BuildingState {
   floorPlans: FloorPlan[];
   selectedFloor: string | null;
   sensorData: Map<string, SensorData>;
+  sensorHistory: Map<string, SensorData[]>;
   isConnected: boolean;
   error: string | null;
+  activeTab: 'dashboard' | 'kpi';
 }
