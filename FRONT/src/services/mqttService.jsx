@@ -1,12 +1,11 @@
 import mqtt from 'mqtt';
-import type { MQTTConfig, SensorData } from '../types';
 import { useBuildingStore } from '../store/buildingStore';
 
 export class MQTTService {
-  private client: mqtt.MqttClient | null = null;
-  private messageHandlers: Map<string, (message: any) => void> = new Map();
+  client = null;
+  messageHandlers = new Map();
 
-  async connect(config: MQTTConfig): Promise<void> {
+  async connect(config) {
     return new Promise((resolve, reject) => {
       try {
 
@@ -16,7 +15,7 @@ export class MQTTService {
           password: config.password,
           reconnectPeriod: 1000,
           connectTimeout: 30 * 1000,
-          protocol: 'wss' as const, // Use WebSocket Secure
+          protocol: 'wss', // Use WebSocket Secure
         };
 
         const brokerUrl = config.brokerUrl.startsWith('ws')
@@ -57,14 +56,14 @@ export class MQTTService {
     });
   }
 
-  disconnect(): void {
+  disconnect() {
     if (this.client) {
       this.client.end();
       this.client = null;
     }
   }
 
-  subscribe(topic: string, callback?: (message: any) => void): void {
+  subscribe(topic, callback) {
     if (!this.client) {
       throw new Error('MQTT client not connected');
     }
@@ -82,7 +81,7 @@ export class MQTTService {
     });
   }
 
-  unsubscribe(topic: string): void {
+  unsubscribe(topic) {
     if (!this.client) return;
 
     this.messageHandlers.delete(topic);
@@ -93,7 +92,7 @@ export class MQTTService {
     });
   }
 
-  publish(topic: string, message: any): void {
+  publish(topic, message) {
     if (!this.client) {
       throw new Error('MQTT client not connected');
     }
@@ -105,7 +104,7 @@ export class MQTTService {
     });
   }
 
-  private handleMessage(topic: string, payload: any): void {
+  handleMessage(topic, payload) {
     // Handle sensor data messages
     if (topic.includes('sensor')) {
       this.handleSensorData(topic, payload);
@@ -118,12 +117,12 @@ export class MQTTService {
     }
   }
 
-  private handleSensorData(topic: string, payload: any): void {
+  handleSensorData(topic, payload) {
     // Extract room ID from topic (e.g., "building/floor1/room1/sensor")
     const parts = topic.split('/');
     const roomId = parts[2] || 'unknown';
 
-    const sensorData: SensorData = {
+    const sensorData = {
       roomId,
       occupied: payload.occupied !== undefined ? payload.occupied : false,
       temperature: payload.temperature || 0,
@@ -134,11 +133,11 @@ export class MQTTService {
     useBuildingStore.getState().updateSensorData(roomId, sensorData);
   }
 
-  isConnected(): boolean {
+  isConnected() {
     return this.client?.connected || false;
   }
 
-  getClient(): mqtt.MqttClient | null {
+  getClient() {
     return this.client;
   }
 }

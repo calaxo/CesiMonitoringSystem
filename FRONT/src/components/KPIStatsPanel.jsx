@@ -12,14 +12,13 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useBuildingStore } from '../store/buildingStore';
-import { aggregateKPI, type TimePeriod } from '../utils/kpiUtils';
-import type { SensorData } from '../types';
+import { aggregateKPI } from '../utils/kpiUtils';
 import '../styles/KPIStatsPanel.css';
 
 export const KPIStatsPanel = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('hour');
-  const [selectedRoom, setSelectedRoom] = useState<string>('all');
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedPeriod, setSelectedPeriod] = useState('hour');
+  const [selectedRoom, setSelectedRoom] = useState('all');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   
   const { floorPlans, selectedFloor, sensorHistory } = useBuildingStore();
 
@@ -30,7 +29,7 @@ export const KPIStatsPanel = () => {
   // Collecte l'historique pour la période sélectionnée
   const { temperatureChartData, presenceBarData } = useMemo(() => {
     // Filtre les données par salle
-    let filteredData: SensorData[] = [];
+    let filteredData = [];
     
     if (selectedRoom === 'all') {
       // Toutes les salles - combine les historiques
@@ -61,16 +60,16 @@ export const KPIStatsPanel = () => {
     const aggregated = aggregateKPI(filteredData, selectedPeriod);
     
     // Crée une map des données agrégées par clé de période
-    const aggregatedMap = new Map<number, typeof aggregated[0]>();
+    const aggregatedMap = new Map();
     for (const agg of aggregated) {
       aggregatedMap.set(agg.periodStart, agg);
     }
 
     // Génère TOUTES les périodes du jour sélectionné
-    const allPeriods: typeof aggregated = [];
+    const allPeriods = [];
     let currentTime = dateStart;
     
-    const getPeriodDurationMs = (period: TimePeriod): number => {
+    const getPeriodDurationMs = (period) => {
       switch (period) {
         case 'minute': return 60 * 1000;
         case 'hour': return 60 * 60 * 1000;
@@ -91,7 +90,7 @@ export const KPIStatsPanel = () => {
       const periodStart = Math.floor(currentTime / periodDurationMs) * periodDurationMs;
       
       if (aggregatedMap.has(periodStart)) {
-        allPeriods.push(aggregatedMap.get(periodStart)!);
+        allPeriods.push(aggregatedMap.get(periodStart));
       } else {
         // Crée une période vide
         allPeriods.push({
@@ -146,7 +145,7 @@ export const KPIStatsPanel = () => {
           <select
             id="period-select"
             value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value as TimePeriod)}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
           >
             <option value="minute">Par Minute</option>
             <option value="hour">Par Heure</option>

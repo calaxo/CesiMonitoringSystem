@@ -1,12 +1,6 @@
-import React from 'react';
 import '../styles/ConnectionStatus.css';
 
-interface ConnectionStatusProps {
-  isConnected: boolean;
-  error?: string | null;
-}
-
-export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
+export const ConnectionStatus = ({
   isConnected,
   error,
 }) => {

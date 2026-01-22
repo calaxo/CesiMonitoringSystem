@@ -1,14 +1,7 @@
-import React, { useState } from 'react';
-import type { MQTTConfig } from '../types';
+import { useState } from 'react';
 import '../styles/MQTTConfig.css';
 
-interface MQTTConfigProps {
-  onConnect: (config: MQTTConfig) => void;
-  isConnecting: boolean;
-  error?: string | null;
-}
-
-export const MQTTConfigPanel: React.FC<MQTTConfigProps> = ({
+export const MQTTConfigPanel = ({
   onConnect,
   isConnecting,
   error,
@@ -23,10 +16,10 @@ export const MQTTConfigPanel: React.FC<MQTTConfigProps> = ({
   const [password, setPassword] = useState('');
   const [port, setPort] = useState(8883);
 
-  const handleConnect = (e: React.FormEvent) => {
+  const handleConnect = (e) => {
     e.preventDefault();
 
-    const config: MQTTConfig = {
+    const config = {
       brokerUrl,
       clientId,
       username: username || undefined,

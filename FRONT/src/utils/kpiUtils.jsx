@@ -1,36 +1,18 @@
 // Fonctions utilitaires pour calculer les KPI de température et de présence
-import type { SensorData } from '../types';
-
-export type TimePeriod = 'minute' | 'hour' | 'day' | 'week' | 'month';
-
-export interface AggregatedKPI {
-  periodStart: number; // timestamp du début de la période
-  periodEnd: number;   // timestamp de fin de période
-  temperature: {
-    min: number;
-    max: number;
-    avg: number;
-  };
-  presenceRate: number; // taux de présence (0-1)
-  count: number; // nombre de mesures
-}
 
 // Regroupe les données par période (ex: minute, heure, etc.)
-export function groupSensorDataByPeriod(
-  data: SensorData[],
-  period: TimePeriod
-): Map<number, SensorData[]> {
-  const grouped = new Map<number, SensorData[]>();
+export function groupSensorDataByPeriod(data, period) {
+  const grouped = new Map();
   for (const d of data) {
     const key = getPeriodKey(d.timestamp, period);
     if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key)!.push(d);
+    grouped.get(key).push(d);
   }
   return grouped;
 }
 
 // Calcule la clé de période (timestamp arrondi à la période)
-export function getPeriodKey(timestamp: number, period: TimePeriod): number {
+export function getPeriodKey(timestamp, period) {
   const date = new Date(timestamp);
   switch (period) {
     case 'minute':
@@ -58,12 +40,9 @@ export function getPeriodKey(timestamp: number, period: TimePeriod): number {
 }
 
 // Calcule les KPI pour chaque période
-export function aggregateKPI(
-  data: SensorData[],
-  period: TimePeriod
-): AggregatedKPI[] {
+export function aggregateKPI(data, period) {
   const grouped = groupSensorDataByPeriod(data, period);
-  const result: AggregatedKPI[] = [];
+  const result = [];
   for (const [key, group] of grouped.entries()) {
     const temps = group.map(d => d.temperature);
     const pres = group.map(d => d.occupied ? 1 : 0);
@@ -75,7 +54,7 @@ export function aggregateKPI(
         max: Math.max(...temps),
         avg: temps.reduce((a, b) => a + b, 0) / temps.length,
       },
-      presenceRate: pres.reduce((a: number, b: number) => a + b, 0) / pres.length,
+      presenceRate: pres.reduce((a, b) => a + b, 0) / pres.length,
       count: group.length,
     });
   }
@@ -83,7 +62,7 @@ export function aggregateKPI(
 }
 
 // Durée en ms d'une période
-export function getPeriodDuration(period: TimePeriod): number {
+export function getPeriodDuration(period) {
   switch (period) {
     case 'minute': return 60 * 1000;
     case 'hour': return 60 * 60 * 1000;
