@@ -15,7 +15,7 @@ import { useBuildingStore } from '../store/buildingStore';
 import { aggregateKPI } from '../utils/kpiUtils';
 import '../styles/KPIStatsPanel.css';
 
-export const KPIStatsPanel = () => {
+export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('hour');
   const [selectedRoom, setSelectedRoom] = useState('all');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -137,7 +137,18 @@ export const KPIStatsPanel = () => {
 
   return (
     <div className="kpi-stats-panel">
-      <h2>📊 Statistiques KPI - Température & Présence</h2>
+      <div className="kpi-header">
+        <h2>📊 Statistiques KPI - Température & Présence</h2>
+        {onFullscreen && !isFullscreen && (
+          <button
+            className="fullscreen-btn"
+            onClick={onFullscreen}
+            title="Fullscreen"
+          >
+            ⛶
+          </button>
+        )}
+      </div>
       
       <div className="kpi-controls">
         <div className="control-group">

@@ -18,6 +18,7 @@ import SAMPLE_BUILDING from './data/salle';
 
 function App() {
   const [mqttConfig, setMqttConfig] = useState(null);
+  const [fullscreenMode, setFullscreenMode] = useState(null); // 'kpi' or 'floorplan' or null
   const {
     floorPlans,
     selectedFloor,
@@ -56,55 +57,85 @@ function App() {
 
       <TabNavigation />
 
-      <div className="app-content">
-        <aside className="sidebar">
-          <MQTTConfigPanel
-            onConnect={handleConnect}
-            isConnecting={isConnecting}
-            error={mqttError}
-          />
-          <SimulationPanel />
-          {activeTab === 'dashboard' && (
-            <>
-              <FloorSelector
-                floors={floorPlans}
-                selectedFloorId={selectedFloor}
-                onSelectFloor={handleFloorSelect}
-              />
-              <RoomDetails rooms={currentRooms} sensorData={sensorData} />
-            </>
+      {fullscreenMode ? (
+        <div className="fullscreen-container">
+          <button
+            className="fullscreen-close-btn"
+            onClick={() => setFullscreenMode(null)}
+            title="Exit fullscreen"
+          >
+            ✕
+          </button>
+          {fullscreenMode === 'floorplan' && currentFloor ? (
+            <BuildingFloorPlan
+              rooms={currentRooms}
+              sensorData={sensorData}
+              floorName={currentFloor.name}
+              isFullscreen={true}
+            />
+          ) : (
+            <KPIStatsPanel isFullscreen={true} />
           )}
-        </aside>
+        </div>
+      ) : (
+        <div className="app-content">
+          <aside className="sidebar">
+            <MQTTConfigPanel
+              onConnect={handleConnect}
+              isConnecting={isConnecting}
+              error={mqttError}
+            />
+            <SimulationPanel />
+          </aside>
 
-        {activeTab === 'dashboard' && (
-          <main className="main-content">
-            {currentFloor ? (
-              <BuildingFloorPlan
-                rooms={currentRooms}
-                sensorData={sensorData}
-                floorName={currentFloor.name}
-              />
-            ) : (
-              <div className="no-floor">
-                <p>No floor selected. Please select a floor to view.</p>
+          {activeTab === 'dashboard' && (
+            <main className="main-content-dashboard">
+              <div className="dashboard-layout">
+                {/* Etage section */}
+                <section className="etage-section">
+                  <div className="etage-content">
+                    {currentFloor ? (
+                      <BuildingFloorPlan
+                        rooms={currentRooms}
+                        sensorData={sensorData}
+                        floorName={currentFloor.name}
+                        onFullscreen={() => setFullscreenMode('floorplan')}
+                        floors={floorPlans}
+                        selectedFloorId={selectedFloor}
+                        onSelectFloor={handleFloorSelect}
+                      />
+                    ) : (
+                      <div className="no-floor">
+                        <p>No floor selected. Please select a floor to view.</p>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* Room details section */}
+                <section className="room-details-section">
+                  <RoomDetails rooms={currentRooms} sensorData={sensorData} />
+                </section>
               </div>
-            )}
-          </main>
-        )}
+            </main>
+          )}
 
-        {activeTab === 'kpi' && (
-          <main className="main-content-full">
-            <KPIStatsPanel />
-          </main>
-        )}
-      </div>
+          {activeTab === 'kpi' && (
+            <main className="main-content-full">
+              <KPIStatsPanel onFullscreen={() => setFullscreenMode('kpi')} />
+            </main>
+          )}
+        </div>
+      )}
 
-      <footer className="app-footer">
-        <p>
-          Building Monitoring Dashboard • Last Update:{' '}
-          {new Date().toLocaleTimeString()}
-        </p>
-      </footer>
+      {!fullscreenMode && (
+        <footer className="app-footer">
+          <p>
+            Building Monitoring Dashboard • Last Update:{' '}
+            {new Date().toLocaleTimeString()}
+          </p>
+        </footer>
+      )}
     </div>
   );
 }
