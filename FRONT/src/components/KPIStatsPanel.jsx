@@ -18,13 +18,15 @@ import "../styles/KPIStatsPanel.css";
 export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
   // Récupérer les valeurs sauvegardées ou utiliser les valeurs par défaut
   const [selectedPeriod, setSelectedPeriod] = useState(
-    () => localStorage.getItem("kpi_period") || "hour"
+    () => localStorage.getItem("kpi_period") || "hour",
   );
   const [selectedRoom, setSelectedRoom] = useState(
-    () => localStorage.getItem("kpi_room") || "all"
+    () => localStorage.getItem("kpi_room") || "all",
   );
   const [selectedDate, setSelectedDate] = useState(
-    () => localStorage.getItem("kpi_date") || new Date().toISOString().split("T")[0]
+    () =>
+      localStorage.getItem("kpi_date") ||
+      new Date().toISOString().split("T")[0],
   );
   const [historyData, setHistoryData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -115,7 +117,9 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
     };
 
     const intervalMs = getRefreshInterval();
-    console.log(`⏰ Auto-refresh KPI configuré: toutes les ${intervalMs / 1000}s`);
+    console.log(
+      `⏰ Auto-refresh KPI configuré: toutes les ${intervalMs / 1000}s`,
+    );
 
     const interval = setInterval(() => {
       console.log(`🔄 Rafraîchissement auto KPI (${selectedPeriod})`);
