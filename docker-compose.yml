@@ -1,0 +1,75 @@
+
+services:
+  back:
+
+    image: ghcr.io/calaxo/cesimonitoringsystem:latest
+    container_name: hutc-back
+
+    ports:
+      - "5500:5500"
+    restart: unless-stopped
+    # Optionnel: pour itérer rapidement sur les assets sans rebuild l'image,
+    # montez le dossier local des assets dans le conteneur (lecture seule)
+    # volumes:
+    #   - ./BACK/assets:/app/assets:ro
+    environment:
+      GLPI_DB_HOST: db
+      GLPI_DB_PORT: 3306
+      GLPI_SKIP_AUTOINSTALL: true
+      GLPI_DB_NAME: ${DB_NAME}
+      GLPI_DB_USER: ${DB_USER}
+      GLPI_DB_PASSWORD: ${DB_PASSWORD}
+      GLPI_SKIP_AUTOUPDATE: false
+      NODE_ENV: production
+      PORT: 5500
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-u", "test", "-P", "test_user_password", "-h", "localhost", "-t", "$$SYS/broker/uptime", "-i", "docker_health_check", "-C", "1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+  db:
+    image: mariadb:10.11
+    container_name: glpi_db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${ROOT_PASSWORD}
+    healthcheck:
+      test: mysqladmin ping -h 127.0.0.1 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
+      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - /data/glpi/glpidb:/var/lib/mysql
+  
+
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: phpmyadmin
+    ports:
+      - 8192:80
+    environment:
+      PMA_ARBITRARY: 1
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: ${ROOT_PASSWORD}
+      UPLOAD_LIMIT: 800M
+
+networks:
+  frontend:
+    external: true
+  backend_glpi:
+    driver: bridge
