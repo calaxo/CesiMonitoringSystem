@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import '../styles/BuildingFloorPlan.css';
+import { useState, useEffect, useRef } from "react";
+import "../styles/BuildingFloorPlan.css";
 
 export const BuildingFloorPlan = ({
   rooms,
@@ -24,11 +24,11 @@ export const BuildingFloorPlan = ({
   };
 
   const getTemperatureColor = (temp) => {
-    if (temp < 15) return '#4a90e2'; // Blue - Cold
-    if (temp < 18) return '#7ed321'; // Green - Cool
-    if (temp < 22) return '#f5a623'; // Orange - Normal
-    if (temp < 25) return '#e74c3c'; // Red - Warm
-    return '#c0392b'; // Dark Red - Very Hot
+    if (temp < 15) return "#4a90e2"; // Blue - Cold
+    if (temp < 18) return "#7ed321"; // Green - Cool
+    if (temp < 22) return "#f5a623"; // Orange - Normal
+    if (temp < 25) return "#e74c3c"; // Red - Warm
+    return "#c0392b"; // Dark Red - Very Hot
   };
 
   // Calculate canvas dimensions - ENLARGED
@@ -81,9 +81,9 @@ export const BuildingFloorPlan = ({
 
     const container = planContainerRef.current;
     if (container) {
-      container.addEventListener('wheel', handleWheel, { passive: false });
+      container.addEventListener("wheel", handleWheel, { passive: false });
       return () => {
-        container.removeEventListener('wheel', handleWheel);
+        container.removeEventListener("wheel", handleWheel);
       };
     }
   }, [zoom]);
@@ -91,11 +91,11 @@ export const BuildingFloorPlan = ({
   // Add mouse move and up listeners
   useEffect(() => {
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
       return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
       };
     }
   }, [isDragging, dragStart]);
@@ -105,15 +105,16 @@ export const BuildingFloorPlan = ({
       <div className="floor-plan-header">
         <div className="header-left">
           <div className="floor-buttons">
-            {floors && floors.map((floor) => (
-              <button
-                key={floor.id}
-                className={`floor-btn ${selectedFloorId === floor.id ? 'active' : ''}`}
-                onClick={() => onSelectFloor(floor.id)}
-              >
-                {floor.name}
-              </button>
-            ))}
+            {floors &&
+              floors.map((floor) => (
+                <button
+                  key={floor.id}
+                  className={`floor-btn ${selectedFloorId === floor.id ? "active" : ""}`}
+                  onClick={() => onSelectFloor(floor.id)}
+                >
+                  {floor.name}
+                </button>
+              ))}
           </div>
         </div>
         <div className="header-controls">
@@ -128,11 +129,11 @@ export const BuildingFloorPlan = ({
           )}
         </div>
       </div>
-      <div 
-        className={`plan-container ${isDragging ? 'dragging' : ''}`}
+      <div
+        className={`plan-container ${isDragging ? "dragging" : ""}`}
         ref={planContainerRef}
         onMouseDown={handleMouseDown}
-        style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+        style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
         <svg
           ref={svgRef}
@@ -140,11 +141,11 @@ export const BuildingFloorPlan = ({
           preserveAspectRatio="xMidYMid meet"
           viewBox={`0 0 ${maxWidth} ${maxHeight}`}
           style={{
-            width: '100%',
-            height: '100%',
+            width: "100%",
+            height: "100%",
             transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
-            transformOrigin: 'top center',
-            transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+            transformOrigin: "top center",
+            transition: isDragging ? "none" : "transform 0.2s ease-out",
           }}
         >
           {/* Background */}
@@ -152,7 +153,12 @@ export const BuildingFloorPlan = ({
 
           {/* Grid lines for reference */}
           <defs>
-            <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+            <pattern
+              id="grid"
+              width="50"
+              height="50"
+              patternUnits="userSpaceOnUse"
+            >
               <path
                 d="M 50 0 L 0 0 0 50"
                 fill="none"
@@ -167,7 +173,9 @@ export const BuildingFloorPlan = ({
           {rooms.map((room) => {
             const roomData = getRoomStatus(room.id);
             const isOccupied = roomData?.occupied || false;
-            const temp = roomData?.temperature || 20;
+            const rawTemp = roomData?.temperature ?? room.temperature ?? 20;
+            const temp =
+              typeof rawTemp === "number" ? rawTemp : parseFloat(rawTemp) || 20;
             const tempColor = getTemperatureColor(temp);
 
             const x = padding + room.x * roomScale;
@@ -183,8 +191,8 @@ export const BuildingFloorPlan = ({
                   y={y}
                   width={width}
                   height={height}
-                  fill={isOccupied ? '#ffe6e6' : '#f0f0f0'}
-                  stroke={isOccupied ? '#e74c3c' : '#999'}
+                  fill={isOccupied ? "#ffe6e6" : "#f0f0f0"}
+                  stroke={isOccupied ? "#e74c3c" : "#999"}
                   strokeWidth="2"
                   className="room-rect"
                 />
@@ -255,9 +263,9 @@ export const BuildingFloorPlan = ({
                   textAnchor="middle"
                   className="room-status"
                   fontSize="14"
-                  fill={isOccupied ? '#e74c3c' : '#999'}
+                  fill={isOccupied ? "#e74c3c" : "#999"}
                 >
-                  {isOccupied ? 'Occupée' : 'Vide'}
+                  {isOccupied ? "Occupée" : "Vide"}
                 </text>
               </g>
             );
@@ -268,23 +276,38 @@ export const BuildingFloorPlan = ({
       {/* Legend */}
       <div className="legend">
         <div className="legend-item">
-          <div className="legend-color" style={{ backgroundColor: '#4a90e2' }} />
+          <div
+            className="legend-color"
+            style={{ backgroundColor: "#4a90e2" }}
+          />
           <span>&lt; 15°C</span>
         </div>
         <div className="legend-item">
-          <div className="legend-color" style={{ backgroundColor: '#7ed321' }} />
+          <div
+            className="legend-color"
+            style={{ backgroundColor: "#7ed321" }}
+          />
           <span>15 - 18°C</span>
         </div>
         <div className="legend-item">
-          <div className="legend-color" style={{ backgroundColor: '#f5a623' }} />
+          <div
+            className="legend-color"
+            style={{ backgroundColor: "#f5a623" }}
+          />
           <span>18 - 22°C</span>
         </div>
         <div className="legend-item">
-          <div className="legend-color" style={{ backgroundColor: '#e74c3c' }} />
+          <div
+            className="legend-color"
+            style={{ backgroundColor: "#e74c3c" }}
+          />
           <span>22 - 25°C</span>
         </div>
         <div className="legend-item">
-          <div className="legend-color" style={{ backgroundColor: '#c0392b' }} />
+          <div
+            className="legend-color"
+            style={{ backgroundColor: "#c0392b" }}
+          />
           <span>&gt; 25°C</span>
         </div>
         <div className="legend-spacer"></div>

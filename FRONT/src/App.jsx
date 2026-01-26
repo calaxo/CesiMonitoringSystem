@@ -1,20 +1,21 @@
-import { useState, useEffect } from 'react';
-import { useBuildingStore } from './store/buildingStore';
-import { useMQTT } from './hooks/useMQTT';
-import { MQTTConfigPanel } from './components/MQTTConfigPanel';
-import { BuildingFloorPlan } from './components/BuildingFloorPlan';
-import { FloorSelector } from './components/FloorSelector';
-import { RoomDetails } from './components/RoomDetails';
-import { ConnectionStatus } from './components/ConnectionStatus';
-import { SimulationPanel } from './components/SimulationPanel';
-import { KPIStatsPanel } from './components/KPIStatsPanel';
-import { TabNavigation } from './components/TabNavigation';
-import './App.css';
+import { useState, useEffect } from "react";
+import { useBuildingStore } from "./store/buildingStore";
+import { useMQTT } from "./hooks/useMQTT";
+import { useApiData } from "./hooks/useApiData";
+import { MQTTConfigPanel } from "./components/MQTTConfigPanel";
+import { BuildingFloorPlan } from "./components/BuildingFloorPlan";
+import { FloorSelector } from "./components/FloorSelector";
+import { RoomDetails } from "./components/RoomDetails";
+import { ConnectionStatus } from "./components/ConnectionStatus";
+import { SimulationPanel } from "./components/SimulationPanel";
+import { KPIStatsPanel } from "./components/KPIStatsPanel";
+import { TabNavigation } from "./components/TabNavigation";
+import { SensorMappingPanel } from "./components/SensorMappingPanel";
+import "./App.css";
 
-import SAMPLE_BUILDING from './data/salle';
+import SAMPLE_BUILDING from "./data/salle";
 
 // Exemple de données de bâtiment - Mis à jour en fonction des plans d'évacuation
-
 
 function App() {
   const [mqttConfig, setMqttConfig] = useState(null);
@@ -24,17 +25,38 @@ function App() {
     selectedFloor,
     sensorData,
     isConnected,
+    isApiConnected,
+    isMqttConnected,
     error,
+    isLoading,
     setFloorPlans,
     setSelectedFloor,
   } = useBuildingStore();
 
   const { isConnecting, error: mqttError } = useMQTT(mqttConfig);
 
+  // Hook pour charger les données depuis l'API
+  // Polling activé pour rafraîchir les données périodiquement
+  const {
+    isLoading: isApiLoading,
+    error: apiError,
+    stats,
+    refresh: refreshApiData,
+    checkServerHealth,
+  } = useApiData({
+    autoLoad: true, // Charger automatiquement au démarrage
+    pollingInterval: 10000, // Rafraîchir toutes les 10 secondes (en ms)
+  });
+
   // Initialize floor plans on mount
   useEffect(() => {
     setFloorPlans(SAMPLE_BUILDING);
   }, [setFloorPlans]);
+
+  // Vérifier la santé du serveur au chargement
+  useEffect(() => {
+    checkServerHealth();
+  }, [checkServerHealth]);
 
   const handleConnect = (config) => {
     setMqttConfig(config);
@@ -48,11 +70,32 @@ function App() {
   const currentRooms = currentFloor?.rooms || [];
   const activeTab = useBuildingStore((state) => state.activeTab);
 
+  // Combiner les erreurs
+  const displayError = apiError || mqttError || error;
+
   return (
     <div className="app-container">
       <header className="app-header">
         <h1>Système de Surveillance CESI</h1>
-        <ConnectionStatus isConnected={isConnected} error={mqttError || error} />
+        <div className="header-status">
+          <ConnectionStatus
+            isConnected={isConnected}
+            isApiConnected={isApiConnected}
+            isMqttConnected={isMqttConnected}
+            error={displayError}
+          />
+          {(isLoading || isApiLoading) && (
+            <span className="loading-indicator">Chargement...</span>
+          )}
+          <button
+            className="refresh-btn"
+            onClick={refreshApiData}
+            disabled={isApiLoading}
+            title="Rafraîchir les données"
+          >
+            🔄
+          </button>
+        </div>
       </header>
 
       <TabNavigation />
@@ -66,7 +109,7 @@ function App() {
           >
             ×
           </button>
-          {fullscreenMode === 'floorplan' && currentFloor ? (
+          {fullscreenMode === "floorplan" && currentFloor ? (
             <BuildingFloorPlan
               rooms={currentRooms}
               sensorData={sensorData}
@@ -88,7 +131,7 @@ function App() {
             <SimulationPanel />
           </aside>
 
-          {activeTab === 'dashboard' && (
+          {activeTab === "dashboard" && (
             <main className="main-content-dashboard">
               <div className="dashboard-layout">
                 {/* Etage section */}
@@ -99,14 +142,17 @@ function App() {
                         rooms={currentRooms}
                         sensorData={sensorData}
                         floorName={currentFloor.name}
-                        onFullscreen={() => setFullscreenMode('floorplan')}
+                        onFullscreen={() => setFullscreenMode("floorplan")}
                         floors={floorPlans}
                         selectedFloorId={selectedFloor}
                         onSelectFloor={handleFloorSelect}
                       />
                     ) : (
                       <div className="no-floor">
-                        <p>Aucun étage sélectionné. Veuillez sélectionner un étage pour voir le plan.</p>
+                        <p>
+                          Aucun étage sélectionné. Veuillez sélectionner un
+                          étage pour voir le plan.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -120,9 +166,15 @@ function App() {
             </main>
           )}
 
-          {activeTab === 'kpi' && (
+          {activeTab === "kpi" && (
             <main className="main-content-full">
-              <KPIStatsPanel onFullscreen={() => setFullscreenMode('kpi')} />
+              <KPIStatsPanel onFullscreen={() => setFullscreenMode("kpi")} />
+            </main>
+          )}
+
+          {activeTab === "sensors" && (
+            <main className="main-content-full">
+              <SensorMappingPanel />
             </main>
           )}
         </div>
@@ -131,8 +183,8 @@ function App() {
       {!fullscreenMode && (
         <footer className="app-footer">
           <p>
-            Tableau de Bord de Surveillance du Bâtiment • Dernière mise à jour:{' '}
-            {new Date().toLocaleTimeString('fr-FR')}
+            Tableau de Bord de Surveillance du Bâtiment • Dernière mise à jour:{" "}
+            {new Date().toLocaleTimeString("fr-FR")}
           </p>
         </footer>
       )}

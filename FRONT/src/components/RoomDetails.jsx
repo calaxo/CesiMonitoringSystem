@@ -1,9 +1,6 @@
-import '../styles/RoomDetails.css';
+import "../styles/RoomDetails.css";
 
-export const RoomDetails = ({
-  rooms,
-  sensorData,
-}) => {
+export const RoomDetails = ({ rooms, sensorData }) => {
   const sortedRooms = [...rooms].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
@@ -18,10 +15,10 @@ export const RoomDetails = ({
                 <h4>{room.name}</h4>
                 <span
                   className={`status-badge ${
-                    data?.occupied ? 'occupied' : 'empty'
+                    data?.occupied ? "occupied" : "empty"
                   }`}
                 >
-                  {data?.occupied ? 'Occupée' : 'Vide'}
+                  {data?.occupied ? "Occupée" : "Vide"}
                 </span>
               </div>
 
@@ -31,7 +28,11 @@ export const RoomDetails = ({
                     <div className="info-item">
                       <span className="label">Température:</span>
                       <span className="value">
-                        {data.temperature.toFixed(1)}°C
+                        {(typeof data.temperature === "number"
+                          ? data.temperature
+                          : parseFloat(data.temperature) || 0
+                        ).toFixed(1)}
+                        °C
                       </span>
                     </div>
                     {data.humidity && (
@@ -48,7 +49,9 @@ export const RoomDetails = ({
                     </div>
                   </>
                 ) : (
-                  <div className="no-data">Aucune donnée de capteur disponible</div>
+                  <div className="no-data">
+                    Aucune donnée de capteur disponible
+                  </div>
                 )}
               </div>
             </div>

@@ -1,15 +1,18 @@
-import { useEffect, useState, useCallback } from 'react';
-import { mqttService } from '../services/mqttService';
-import { useBuildingStore } from '../store/buildingStore';
+import { useEffect, useState, useCallback } from "react";
+import { mqttService } from "../services/mqttService";
+import { useBuildingStore } from "../store/buildingStore";
 
 export const useMQTT = (config) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState(null);
-  const { isConnected, setConnectionStatus, setError: setStoreError } =
-    useBuildingStore();
+  const {
+    isMqttConnected,
+    setMqttConnectionStatus,
+    setError: setStoreError,
+  } = useBuildingStore();
 
   const connect = useCallback(async () => {
-    if (!config || isConnected) return;
+    if (!config || isMqttConnected) return;
 
     setIsConnecting(true);
     try {
@@ -17,45 +20,45 @@ export const useMQTT = (config) => {
       setError(null);
 
       // Subscribe to sensor topics
-      mqttService.subscribe('building/+/+/sensor');
-      mqttService.subscribe('building/status');
+      mqttService.subscribe("building/+/+/sensor");
+      mqttService.subscribe("building/status");
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Connection failed';
+      const message = err instanceof Error ? err.message : "Connection failed";
       setError(message);
       setStoreError(message);
     } finally {
       setIsConnecting(false);
     }
-  }, [config, isConnected, setStoreError]);
+  }, [config, isMqttConnected, setStoreError]);
 
   const disconnect = useCallback(() => {
     mqttService.disconnect();
-    setConnectionStatus(false);
-  }, [setConnectionStatus]);
+    setMqttConnectionStatus(false);
+  }, [setMqttConnectionStatus]);
 
   const publish = useCallback(
     (topic, message) => {
-      if (!isConnected) {
-        setError('Not connected to MQTT broker');
+      if (!isMqttConnected) {
+        setError("Not connected to MQTT broker");
         return;
       }
       mqttService.publish(topic, message);
     },
-    [isConnected]
+    [isMqttConnected],
   );
 
   useEffect(() => {
-    if (config && !isConnected) {
+    if (config && !isMqttConnected) {
       connect();
     }
 
     return () => {
       // Cleanup on unmount
     };
-  }, [config, isConnected, connect]);
+  }, [config, isMqttConnected, connect]);
 
   return {
-    isConnected,
+    isConnected: isMqttConnected,
     isConnecting,
     error,
     connect,

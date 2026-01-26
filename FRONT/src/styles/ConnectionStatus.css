@@ -15,6 +15,11 @@
   border-color: #27ae60;
 }
 
+.connection-status.partial {
+  background-color: #fff8e6;
+  border-color: #f39c12;
+}
+
 .connection-status.disconnected {
   background-color: #fdeaea;
   border-color: #e74c3c;
@@ -31,8 +36,17 @@
   color: #27ae60;
 }
 
+.connection-status.partial .status-indicator {
+  color: #f39c12;
+}
+
 .connection-status.disconnected .status-indicator {
   color: #e74c3c;
+}
+
+.status-dots {
+  display: flex;
+  gap: 4px;
 }
 
 .status-dot {
@@ -46,6 +60,11 @@
 .status-dot.active {
   background-color: #27ae60;
   box-shadow: 0 0 10px rgba(39, 174, 96, 0.5);
+}
+
+.status-dot.mqtt.active {
+  background-color: #3498db;
+  box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
 }
 
 .error-text {
