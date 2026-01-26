@@ -61,3 +61,7 @@ dist-ssr
 *.sln
 *.sw?
 .env
+mosquitto/data/mosquitto.db
+mosquitto/data/mosquitto.db.new
+mosquitto/data/mosquitto.db
+mosquitto/data/mosquitto.db.new

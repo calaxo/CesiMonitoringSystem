@@ -1,5 +1,13 @@
 const express = require("express");
-const { getAllSensorData, getLatestSensorData, getSensorStats } = require("./db");
+const { 
+  getAllSensorData, 
+  getLatestSensorData, 
+  getLatestTemperatureData,
+  getLatestPresenceData,
+  getSensorStats,
+  getAllSensors,
+  updateSensor
+} = require("./db");
 const { publish, getClient } = require("./mqtt");
 
 const router = express.Router();
@@ -20,14 +28,13 @@ router.get("/health", (req, res) => {
 /**
  * GET /api/sensors
  * Récupérer toutes les données de capteurs avec filtrage optionnel
- * Query params: topic, sensorId, sensorType, from, to, limit, offset
+ * Query params: sensorId, dataType (temperature|presence), from, to, limit, offset
  */
 router.get("/sensors", async (req, res) => {
   try {
     const options = {
-      topic: req.query.topic,
       sensorId: req.query.sensorId || req.query.sensor_id,
-      sensorType: req.query.sensorType || req.query.sensor_type,
+      dataType: req.query.dataType || req.query.data_type,
       from: req.query.from,
       to: req.query.to,
       limit: req.query.limit || 100,
@@ -40,7 +47,7 @@ router.get("/sensors", async (req, res) => {
     const sanitizedData = data.map(row => ({
       ...row,
       id: Number(row.id),
-      payload: typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
+      sensor_fk: Number(row.sensor_fk)
     }));
 
     res.json({
@@ -68,7 +75,7 @@ router.get("/sensors/latest", async (req, res) => {
     const sanitizedData = data.map(row => ({
       ...row,
       id: Number(row.id),
-      payload: typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
+      sensor_fk: Number(row.sensor_fk)
     }));
 
     res.json({
@@ -78,6 +85,111 @@ router.get("/sensors/latest", async (req, res) => {
     });
   } catch (err) {
     console.error("Erreur API /sensors/latest:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/sensors/latest/temperature
+ * Récupérer les dernières températures pour chaque capteur
+ */
+router.get("/sensors/latest/temperature", async (req, res) => {
+  try {
+    const data = await getLatestTemperatureData();
+    
+    const sanitizedData = data.map(row => ({
+      ...row,
+      id: Number(row.id),
+      sensor_fk: Number(row.sensor_fk)
+    }));
+
+    res.json({
+      success: true,
+      count: sanitizedData.length,
+      data: sanitizedData
+    });
+  } catch (err) {
+    console.error("Erreur API /sensors/latest/temperature:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/sensors/latest/presence
+ * Récupérer les dernières données de présence pour chaque capteur
+ */
+router.get("/sensors/latest/presence", async (req, res) => {
+  try {
+    const data = await getLatestPresenceData();
+    
+    const sanitizedData = data.map(row => ({
+      ...row,
+      id: Number(row.id),
+      sensor_fk: Number(row.sensor_fk)
+    }));
+
+    res.json({
+      success: true,
+      count: sanitizedData.length,
+      data: sanitizedData
+    });
+  } catch (err) {
+    console.error("Erreur API /sensors/latest/presence:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/sensors/list
+ * Récupérer la liste de tous les capteurs enregistrés
+ */
+router.get("/sensors/list", async (req, res) => {
+  try {
+    const data = await getAllSensors();
+    
+    const sanitizedData = data.map(row => ({
+      ...row,
+      id: Number(row.id)
+    }));
+
+    res.json({
+      success: true,
+      count: sanitizedData.length,
+      data: sanitizedData
+    });
+  } catch (err) {
+    console.error("Erreur API /sensors/list:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+/**
+ * PUT /api/sensors/:id
+ * Mettre à jour les informations d'un capteur (nom, localisation)
+ */
+router.put("/sensors/:id", async (req, res) => {
+  try {
+    const { name, location } = req.body;
+    await updateSensor(req.params.id, { name, location });
+    
+    res.json({
+      success: true,
+      message: `Capteur ${req.params.id} mis à jour`
+    });
+  } catch (err) {
+    console.error("Erreur API PUT /sensors/:id:", err);
     res.status(500).json({
       success: false,
       error: err.message
@@ -113,6 +225,7 @@ router.get("/sensors/:id", async (req, res) => {
   try {
     const options = {
       sensorId: req.params.id,
+      dataType: req.query.dataType || req.query.data_type,
       limit: req.query.limit || 100,
       offset: req.query.offset || 0
     };
@@ -122,7 +235,7 @@ router.get("/sensors/:id", async (req, res) => {
     const sanitizedData = data.map(row => ({
       ...row,
       id: Number(row.id),
-      payload: typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
+      sensor_fk: Number(row.sensor_fk)
     }));
 
     res.json({

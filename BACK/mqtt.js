@@ -53,18 +53,24 @@ async function initMQTT() {
         const messageStr = message.toString();
         console.log(`📨 Message reçu sur ${topic}: ${messageStr.substring(0, 100)}...`);
 
-        // Parser le message (JSON ou texte brut)
+        // Parser le message JSON
         let payload;
         try {
           payload = JSON.parse(messageStr);
         } catch {
-          // Si ce n'est pas du JSON, on encapsule le message
-          payload = { raw_data: messageStr };
+          console.warn("⚠️ Message non-JSON ignoré:", messageStr.substring(0, 50));
+          return;
+        }
+
+        // Vérifier que le message contient un sensor_id
+        if (!payload.sensor_id) {
+          console.warn("⚠️ Message sans sensor_id ignoré");
+          return;
         }
 
         // Insérer dans la base de données
-        await insertSensorData(topic, payload);
-        console.log(`💾 Données sauvegardées pour ${topic}`);
+        await insertSensorData(payload);
+        console.log(`💾 Données sauvegardées pour capteur ${payload.sensor_id}`);
 
       } catch (err) {
         console.error("❌ Erreur traitement message MQTT:", err.message);

@@ -27,19 +27,31 @@ async function initDatabase() {
     conn = await pool.getConnection();
     console.log("✅ Connexion à MariaDB établie");
 
-    // Créer la table si elle n'existe pas
+    // Créer la table des capteurs (cartes Arduino émettrices)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS sensors (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sensor_id VARCHAR(100) UNIQUE NOT NULL,
+        name VARCHAR(255),
+        location VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_sensor_id (sensor_id)
+      )
+    `);
+    console.log("✅ Table sensors prête");
+
+    // Créer la table des données de capteurs
     await conn.query(`
       CREATE TABLE IF NOT EXISTS sensor_data (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        topic VARCHAR(255) NOT NULL,
-        payload JSON NOT NULL,
+        sensor_fk INT NOT NULL,
+        timestamp TIMESTAMP NOT NULL,
+        temperature DECIMAL(5, 2),
+        presence BOOLEAN,
         received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        sensor_id VARCHAR(100),
-        sensor_type VARCHAR(50),
-        value DECIMAL(10, 2),
-        unit VARCHAR(20),
-        INDEX idx_topic (topic),
-        INDEX idx_sensor_id (sensor_id),
+        FOREIGN KEY (sensor_fk) REFERENCES sensors(id) ON DELETE CASCADE,
+        INDEX idx_sensor_fk (sensor_fk),
+        INDEX idx_timestamp (timestamp),
         INDEX idx_received_at (received_at)
       )
     `);
@@ -67,24 +79,98 @@ function getPool() {
 }
 
 /**
- * Insère des données de capteur dans la base
- * @param {string} topic - Topic MQTT
- * @param {object} payload - Données du message
- * @returns {Promise<object>}
+ * Récupère ou crée un capteur par son ID unique
+ * @param {string} sensorId - ID unique du capteur Arduino
+ * @returns {Promise<number>} - ID de la clé primaire du capteur
  */
-async function insertSensorData(topic, payload) {
+async function getOrCreateSensor(sensorId) {
   const conn = await pool.getConnection();
   try {
-    // Extraire les informations du payload si disponibles
-    const sensorId = payload.sensor_id || payload.sensorId || payload.id || null;
-    const sensorType = payload.type || payload.sensor_type || null;
-    const value = payload.value || payload.data || null;
-    const unit = payload.unit || null;
+    // Vérifier si le capteur existe déjà
+    const existing = await conn.query(
+      "SELECT id FROM sensors WHERE sensor_id = ?",
+      [sensorId]
+    );
 
+    if (existing.length > 0) {
+      return existing[0].id;
+    }
+
+    // Créer le capteur s'il n'existe pas
     const result = await conn.query(
-      `INSERT INTO sensor_data (topic, payload, sensor_id, sensor_type, value, unit) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [topic, JSON.stringify(payload), sensorId, sensorType, value, unit]
+      "INSERT INTO sensors (sensor_id) VALUES (?)",
+      [sensorId]
+    );
+
+    return Number(result.insertId);
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * Récupère tous les capteurs enregistrés
+ * @returns {Promise<Array>}
+ */
+async function getAllSensors() {
+  const conn = await pool.getConnection();
+  try {
+    const rows = await conn.query(
+      "SELECT * FROM sensors ORDER BY created_at DESC"
+    );
+    return rows;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * Met à jour les informations d'un capteur
+ * @param {string} sensorId - ID unique du capteur
+ * @param {object} data - Données à mettre à jour (name, location)
+ * @returns {Promise<object>}
+ */
+async function updateSensor(sensorId, data) {
+  const conn = await pool.getConnection();
+  try {
+    const result = await conn.query(
+      "UPDATE sensors SET name = ?, location = ? WHERE sensor_id = ?",
+      [data.name || null, data.location || null, sensorId]
+    );
+    return result;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * Insère des données de capteur dans la base
+ * @param {object} data - Données du message MQTT
+ * @param {string} data.sensor_id - ID unique du capteur Arduino
+ * @param {string} data.timestamp - Timestamp ISO de la mesure
+ * @param {number} [data.temperature] - Température mesurée
+ * @param {boolean} [data.presence] - Présence détectée
+ * @returns {Promise<object>}
+ */
+async function insertSensorData(data) {
+  const conn = await pool.getConnection();
+  try {
+    // Récupérer ou créer le capteur
+    const sensorFk = await getOrCreateSensor(data.sensor_id);
+
+    // Parser le timestamp
+    const timestamp = data.timestamp ? new Date(data.timestamp) : new Date();
+
+    // Insérer les données
+    const result = await conn.query(
+      `INSERT INTO sensor_data (sensor_fk, timestamp, temperature, presence) 
+       VALUES (?, ?, ?, ?)`,
+      [
+        sensorFk,
+        timestamp,
+        data.temperature !== undefined ? data.temperature : null,
+        data.presence !== undefined ? data.presence : null
+      ]
     );
 
     return result;
@@ -101,40 +187,41 @@ async function insertSensorData(topic, payload) {
 async function getAllSensorData(options = {}) {
   const conn = await pool.getConnection();
   try {
-    let query = "SELECT * FROM sensor_data";
+    let query = `
+      SELECT sd.*, s.sensor_id, s.name as sensor_name, s.location as sensor_location
+      FROM sensor_data sd
+      INNER JOIN sensors s ON sd.sensor_fk = s.id
+    `;
     const params = [];
     const conditions = [];
 
-    if (options.topic) {
-      conditions.push("topic = ?");
-      params.push(options.topic);
-    }
-
     if (options.sensorId) {
-      conditions.push("sensor_id = ?");
+      conditions.push("s.sensor_id = ?");
       params.push(options.sensorId);
     }
 
-    if (options.sensorType) {
-      conditions.push("sensor_type = ?");
-      params.push(options.sensorType);
-    }
-
     if (options.from) {
-      conditions.push("received_at >= ?");
+      conditions.push("sd.timestamp >= ?");
       params.push(options.from);
     }
 
     if (options.to) {
-      conditions.push("received_at <= ?");
+      conditions.push("sd.timestamp <= ?");
       params.push(options.to);
+    }
+
+    // Filtrer par type de donnée (temperature ou presence)
+    if (options.dataType === 'temperature') {
+      conditions.push("sd.temperature IS NOT NULL");
+    } else if (options.dataType === 'presence') {
+      conditions.push("sd.presence IS NOT NULL");
     }
 
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    query += " ORDER BY received_at DESC";
+    query += " ORDER BY sd.timestamp DESC";
 
     if (options.limit) {
       query += " LIMIT ?";
@@ -161,14 +248,67 @@ async function getLatestSensorData() {
   const conn = await pool.getConnection();
   try {
     const rows = await conn.query(`
-      SELECT s1.* FROM sensor_data s1
+      SELECT sd.*, s.sensor_id, s.name as sensor_name, s.location as sensor_location
+      FROM sensor_data sd
+      INNER JOIN sensors s ON sd.sensor_fk = s.id
       INNER JOIN (
-        SELECT sensor_id, MAX(received_at) as max_date
+        SELECT sensor_fk, MAX(timestamp) as max_timestamp
         FROM sensor_data
-        WHERE sensor_id IS NOT NULL
-        GROUP BY sensor_id
-      ) s2 ON s1.sensor_id = s2.sensor_id AND s1.received_at = s2.max_date
-      ORDER BY s1.received_at DESC
+        GROUP BY sensor_fk
+      ) latest ON sd.sensor_fk = latest.sensor_fk AND sd.timestamp = latest.max_timestamp
+      ORDER BY sd.timestamp DESC
+    `);
+    return rows;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * Récupère les dernières données de température pour chaque capteur
+ * @returns {Promise<Array>}
+ */
+async function getLatestTemperatureData() {
+  const conn = await pool.getConnection();
+  try {
+    const rows = await conn.query(`
+      SELECT sd.*, s.sensor_id, s.name as sensor_name, s.location as sensor_location
+      FROM sensor_data sd
+      INNER JOIN sensors s ON sd.sensor_fk = s.id
+      INNER JOIN (
+        SELECT sensor_fk, MAX(timestamp) as max_timestamp
+        FROM sensor_data
+        WHERE temperature IS NOT NULL
+        GROUP BY sensor_fk
+      ) latest ON sd.sensor_fk = latest.sensor_fk AND sd.timestamp = latest.max_timestamp
+      WHERE sd.temperature IS NOT NULL
+      ORDER BY sd.timestamp DESC
+    `);
+    return rows;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * Récupère les dernières données de présence pour chaque capteur
+ * @returns {Promise<Array>}
+ */
+async function getLatestPresenceData() {
+  const conn = await pool.getConnection();
+  try {
+    const rows = await conn.query(`
+      SELECT sd.*, s.sensor_id, s.name as sensor_name, s.location as sensor_location
+      FROM sensor_data sd
+      INNER JOIN sensors s ON sd.sensor_fk = s.id
+      INNER JOIN (
+        SELECT sensor_fk, MAX(timestamp) as max_timestamp
+        FROM sensor_data
+        WHERE presence IS NOT NULL
+        GROUP BY sensor_fk
+      ) latest ON sd.sensor_fk = latest.sensor_fk AND sd.timestamp = latest.max_timestamp
+      WHERE sd.presence IS NOT NULL
+      ORDER BY sd.timestamp DESC
     `);
     return rows;
   } finally {
@@ -187,20 +327,32 @@ async function getSensorStats() {
       "SELECT COUNT(*) as count FROM sensor_data"
     );
     const uniqueSensors = await conn.query(
-      "SELECT COUNT(DISTINCT sensor_id) as count FROM sensor_data WHERE sensor_id IS NOT NULL"
+      "SELECT COUNT(*) as count FROM sensors"
     );
-    const uniqueTopics = await conn.query(
-      "SELECT COUNT(DISTINCT topic) as count FROM sensor_data"
+    const temperatureReadings = await conn.query(
+      "SELECT COUNT(*) as count FROM sensor_data WHERE temperature IS NOT NULL"
+    );
+    const presenceReadings = await conn.query(
+      "SELECT COUNT(*) as count FROM sensor_data WHERE presence IS NOT NULL"
     );
     const lastMessage = await conn.query(
-      "SELECT received_at FROM sensor_data ORDER BY received_at DESC LIMIT 1"
+      "SELECT timestamp FROM sensor_data ORDER BY timestamp DESC LIMIT 1"
+    );
+    const avgTemperature = await conn.query(
+      "SELECT AVG(temperature) as avg FROM sensor_data WHERE temperature IS NOT NULL"
+    );
+    const activePresence = await conn.query(
+      "SELECT COUNT(*) as count FROM sensor_data sd INNER JOIN (SELECT sensor_fk, MAX(timestamp) as max_ts FROM sensor_data WHERE presence IS NOT NULL GROUP BY sensor_fk) latest ON sd.sensor_fk = latest.sensor_fk AND sd.timestamp = latest.max_ts WHERE sd.presence = true"
     );
 
     return {
       totalMessages: Number(totalMessages[0].count),
       uniqueSensors: Number(uniqueSensors[0].count),
-      uniqueTopics: Number(uniqueTopics[0].count),
-      lastMessageAt: lastMessage[0]?.received_at || null
+      temperatureReadings: Number(temperatureReadings[0].count),
+      presenceReadings: Number(presenceReadings[0].count),
+      lastMessageAt: lastMessage[0]?.timestamp || null,
+      avgTemperature: avgTemperature[0]?.avg ? Number(avgTemperature[0].avg).toFixed(2) : null,
+      activePresenceCount: Number(activePresence[0].count)
     };
   } finally {
     conn.release();
@@ -221,9 +373,14 @@ async function closeDatabase() {
 module.exports = {
   initDatabase,
   getPool,
+  getOrCreateSensor,
+  getAllSensors,
+  updateSensor,
   insertSensorData,
   getAllSensorData,
   getLatestSensorData,
+  getLatestTemperatureData,
+  getLatestPresenceData,
   getSensorStats,
   closeDatabase
 };
