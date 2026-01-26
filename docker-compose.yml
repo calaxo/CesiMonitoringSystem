@@ -16,7 +16,7 @@ services:
       DB_HOST: db
       DB_PORT: 3306
       MQTT_BROKER_URL: mqtt://mosquitto:1883
-      
+
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -39,7 +39,7 @@ services:
       retries: 3
   db:
     image: mariadb:10.11
-    container_name: glpi_db
+    container_name: iot_db
     restart: unless-stopped
     environment:
       MARIADB_DATABASE: ${DB_NAME}
