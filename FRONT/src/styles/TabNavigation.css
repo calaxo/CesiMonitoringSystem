@@ -1,7 +1,7 @@
 .tab-navigation {
   display: flex;
   gap: 10px;
-  margin: 20px;
+  margin: 0px;
   border-bottom: 2px solid #e0e0e0;
   background: white;
   padding: 0;

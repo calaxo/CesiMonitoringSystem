@@ -24,6 +24,12 @@ export const TabNavigation = () => {
       >
         🔗 Configuration Capteurs
       </button>
+      <button
+        className={`tab-button ${activeTab === "simulation" ? "active" : ""}`}
+        onClick={() => setActiveTab("simulation")}
+      >
+        🎮 Simulation
+      </button>
     </div>
   );
 };

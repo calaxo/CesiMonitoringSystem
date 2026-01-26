@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
 import { useBuildingStore } from "./store/buildingStore";
-import { useMQTT } from "./hooks/useMQTT";
 import { useApiData } from "./hooks/useApiData";
-import { MQTTConfigPanel } from "./components/MQTTConfigPanel";
 import { BuildingFloorPlan } from "./components/BuildingFloorPlan";
-import { FloorSelector } from "./components/FloorSelector";
 import { RoomDetails } from "./components/RoomDetails";
 import { ConnectionStatus } from "./components/ConnectionStatus";
 import { SimulationPanel } from "./components/SimulationPanel";
@@ -18,7 +15,6 @@ import SAMPLE_BUILDING from "./data/salle";
 // Exemple de données de bâtiment - Mis à jour en fonction des plans d'évacuation
 
 function App() {
-  const [mqttConfig, setMqttConfig] = useState(null);
   const [fullscreenMode, setFullscreenMode] = useState(null); // 'kpi' ou 'floorplan' ou null
   const {
     floorPlans,
@@ -26,21 +22,17 @@ function App() {
     sensorData,
     isConnected,
     isApiConnected,
-    isMqttConnected,
     error,
     isLoading,
     setFloorPlans,
     setSelectedFloor,
   } = useBuildingStore();
 
-  const { isConnecting, error: mqttError } = useMQTT(mqttConfig);
-
   // Hook pour charger les données depuis l'API
   // Polling activé pour rafraîchir les données périodiquement
   const {
     isLoading: isApiLoading,
     error: apiError,
-    stats,
     refresh: refreshApiData,
     checkServerHealth,
   } = useApiData({
@@ -58,10 +50,6 @@ function App() {
     checkServerHealth();
   }, [checkServerHealth]);
 
-  const handleConnect = (config) => {
-    setMqttConfig(config);
-  };
-
   const handleFloorSelect = (floorId) => {
     setSelectedFloor(floorId);
   };
@@ -71,7 +59,7 @@ function App() {
   const activeTab = useBuildingStore((state) => state.activeTab);
 
   // Combiner les erreurs
-  const displayError = apiError || mqttError || error;
+  const displayError = apiError || error;
 
   return (
     <div className="app-container">
@@ -81,7 +69,6 @@ function App() {
           <ConnectionStatus
             isConnected={isConnected}
             isApiConnected={isApiConnected}
-            isMqttConnected={isMqttConnected}
             error={displayError}
           />
           {(isLoading || isApiLoading) && (
@@ -116,21 +103,18 @@ function App() {
               floorName={currentFloor.name}
               isFullscreen={true}
             />
+          ) : fullscreenMode === "roomdetails" ? (
+            <RoomDetails
+              rooms={floorPlans.flatMap((f) => f.rooms)}
+              sensorData={sensorData}
+              isFullscreen={true}
+            />
           ) : (
             <KPIStatsPanel isFullscreen={true} />
           )}
         </div>
       ) : (
         <div className="app-content">
-          <aside className="sidebar">
-            <MQTTConfigPanel
-              onConnect={handleConnect}
-              isConnecting={isConnecting}
-              error={mqttError}
-            />
-            <SimulationPanel />
-          </aside>
-
           {activeTab === "dashboard" && (
             <main className="main-content-dashboard">
               <div className="dashboard-layout">
@@ -160,7 +144,11 @@ function App() {
 
                 {/* Room details section */}
                 <section className="room-details-section">
-                  <RoomDetails rooms={currentRooms} sensorData={sensorData} />
+                  <RoomDetails
+                    rooms={currentRooms}
+                    sensorData={sensorData}
+                    onFullscreen={() => setFullscreenMode("roomdetails")}
+                  />
                 </section>
               </div>
             </main>
@@ -175,6 +163,12 @@ function App() {
           {activeTab === "sensors" && (
             <main className="main-content-full">
               <SensorMappingPanel />
+            </main>
+          )}
+
+          {activeTab === "simulation" && (
+            <main className="main-content-full">
+              <SimulationPanel />
             </main>
           )}
         </div>
