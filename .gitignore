@@ -65,3 +65,7 @@ mosquitto/data/mosquitto.db
 mosquitto/data/mosquitto.db.new
 mosquitto/data/mosquitto.db
 mosquitto/data/mosquitto.db.new
+
+# Arduino credentials (ne pas commit les mots de passe WiFi)
+ARDUINO/**/config.h
+!ARDUINO/**/config.example.h

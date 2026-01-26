@@ -16,6 +16,13 @@ LoraTwo::LoraTwo(uint8_t myAddr, bool isGateway)
     _seq = 0;
     _recvIdx = 0;
 
+    // Initialiser callback et stockage
+    _receiveCallback = NULL;
+    _dataAvailable = false;
+    _lastSender = 0;
+    _lastPayloadLen = 0;
+    memset(_lastPayload, 0, sizeof(_lastPayload));
+
     for (int i = 0; i < LORATWO_MAX_NODES; i++)
         _nodes[i].active = false;
 
@@ -53,6 +60,39 @@ void LoraTwo::begin(Stream *serial)
 uint8_t LoraTwo::address() { return _myAddr; }
 
 // ===============================
+// CALLBACK & STOCKAGE DONNÉES
+// ===============================
+void LoraTwo::setReceiveCallback(LoraReceiveCallback callback)
+{
+    _receiveCallback = callback;
+}
+
+bool LoraTwo::available()
+{
+    return _dataAvailable;
+}
+
+uint8_t LoraTwo::getLastSender()
+{
+    return _lastSender;
+}
+
+const char *LoraTwo::getLastPayload()
+{
+    return _lastPayload;
+}
+
+uint8_t LoraTwo::getLastPayloadLength()
+{
+    return _lastPayloadLen;
+}
+
+void LoraTwo::clearData()
+{
+    _dataAvailable = false;
+}
+
+// ===============================
 // ENVOI ASYNCHRONE
 // ===============================
 bool LoraTwo::send(uint8_t dst, uint8_t *data, uint8_t len)
@@ -87,7 +127,8 @@ int LoraTwo::addPending(uint8_t dst, LoraTwoPacketType type, uint8_t *data, uint
             Serial.print("[TX] Envoi vers 0x");
             Serial.print(dst, HEX);
             Serial.print(" : ");
-            for (int j = 0; j < len; j++) Serial.print((char)data[j]);
+            for (int j = 0; j < len; j++)
+                Serial.print((char)data[j]);
             Serial.println();
             return i;
         }
@@ -149,8 +190,10 @@ bool LoraTwo::receive(LoraTwoPacket &pkt)
     // Extraire RSSI et SNR si présents
     char *rssiPtr = strstr(_recvBuf, "RSSI:");
     char *snrPtr = strstr(_recvBuf, "SNR:");
-    if (rssiPtr) _lastRSSI = atoi(rssiPtr + 5);
-    if (snrPtr) _lastSNR = atoi(snrPtr + 4);
+    if (rssiPtr)
+        _lastRSSI = atoi(rssiPtr + 5);
+    if (snrPtr)
+        _lastSNR = atoi(snrPtr + 4);
 
     char *rxStart = strstr(_recvBuf, "+TEST: RX \"");
     if (!rxStart)
@@ -197,7 +240,7 @@ bool LoraTwo::parsePacket(char *raw, LoraTwoPacket &pkt)
         return false;
 
     int len = (end - p) / 2;
-    if (len < 5)  // Minimum: src, dst, type, seq, len
+    if (len < 5) // Minimum: src, dst, type, seq, len
         return false;
 
     uint8_t rawBytes[64];
@@ -211,7 +254,7 @@ bool LoraTwo::parsePacket(char *raw, LoraTwoPacket &pkt)
     pkt.dst = rawBytes[1];
     pkt.type = rawBytes[2];
     pkt.seq = rawBytes[3];
-    pkt.len = rawBytes[4];  // Le 5ème byte est la longueur
+    pkt.len = rawBytes[4]; // Le 5ème byte est la longueur
 
     // Copier le payload (après les 5 bytes d'header)
     if (len > 5 && pkt.len > 0)
@@ -228,9 +271,23 @@ bool LoraTwo::parsePacket(char *raw, LoraTwoPacket &pkt)
 // ===============================
 void LoraTwo::processPacket(LoraTwoPacket &pkt)
 {
-    // Afficher le message DATA reçu
+    // Stocker et traiter le message DATA reçu
     if (pkt.type == L2_PKT_DATA && pkt.len > 0)
     {
+        // Stocker les données
+        _lastSender = pkt.src;
+        _lastPayloadLen = pkt.len;
+        memcpy(_lastPayload, pkt.payload, pkt.len);
+        _lastPayload[pkt.len] = '\0'; // Null-terminate
+        _dataAvailable = true;
+
+        // Appeler le callback si défini
+        if (_receiveCallback != NULL)
+        {
+            _receiveCallback(_lastSender, _lastPayload, _lastPayloadLen);
+        }
+
+        // Log optionnel
         Serial.print("[RX] De 0x");
         Serial.print(pkt.src, HEX);
         Serial.print(" (RSSI:");
@@ -238,9 +295,7 @@ void LoraTwo::processPacket(LoraTwoPacket &pkt)
         Serial.print(" SNR:");
         Serial.print(_lastSNR);
         Serial.print(") : ");
-        for (int i = 0; i < pkt.len; i++)
-            Serial.print((char)pkt.payload[i]);
-        Serial.println();
+        Serial.println(_lastPayload);
     }
 
     // ACK pour nodes
