@@ -45,13 +45,11 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS sensor_data (
         id INT AUTO_INCREMENT PRIMARY KEY,
         sensor_fk INT NOT NULL,
-        timestamp TIMESTAMP NOT NULL,
         temperature DECIMAL(5, 2),
         presence BOOLEAN,
         received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (sensor_fk) REFERENCES sensors(id) ON DELETE CASCADE,
         INDEX idx_sensor_fk (sensor_fk),
-        INDEX idx_timestamp (timestamp),
         INDEX idx_received_at (received_at)
       )
     `);
@@ -157,16 +155,12 @@ async function insertSensorData(data) {
     // Récupérer ou créer le capteur
     const sensorFk = await getOrCreateSensor(data.sensor_id);
 
-    // Utiliser l'heure du serveur Node.js (les Arduino n'ont pas d'horloge)
-    const timestamp = new Date();
-
-    // Insérer les données
+    // Insérer les données (received_at est auto-généré par MariaDB)
     const result = await conn.query(
-      `INSERT INTO sensor_data (sensor_fk, timestamp, temperature, presence) 
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO sensor_data (sensor_fk, temperature, presence) 
+       VALUES (?, ?, ?)`,
       [
         sensorFk,
-        timestamp,
         data.temperature !== undefined ? data.temperature : null,
         data.presence !== undefined ? data.presence : null
       ]
@@ -200,12 +194,12 @@ async function getAllSensorData(options = {}) {
     }
 
     if (options.from) {
-      conditions.push("sd.timestamp >= ?");
+      conditions.push("sd.received_at >= ?");
       params.push(options.from);
     }
 
     if (options.to) {
-      conditions.push("sd.timestamp <= ?");
+      conditions.push("sd.received_at <= ?");
       params.push(options.to);
     }
 
@@ -220,7 +214,7 @@ async function getAllSensorData(options = {}) {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    query += " ORDER BY sd.timestamp DESC";
+    query += " ORDER BY sd.received_at DESC";
 
     if (options.limit) {
       query += " LIMIT ?";
@@ -251,11 +245,11 @@ async function getLatestSensorData() {
       FROM sensor_data sd
       INNER JOIN sensors s ON sd.sensor_fk = s.id
       INNER JOIN (
-        SELECT sensor_fk, MAX(timestamp) as max_timestamp
+        SELECT sensor_fk, MAX(received_at) as max_received_at
         FROM sensor_data
         GROUP BY sensor_fk
-      ) latest ON sd.sensor_fk = latest.sensor_fk AND sd.timestamp = latest.max_timestamp
-      ORDER BY sd.timestamp DESC
+      ) latest ON sd.sensor_fk = latest.sensor_fk AND sd.received_at = latest.max_received_at
+      ORDER BY sd.received_at DESC
     `);
     return rows;
   } finally {
@@ -275,13 +269,13 @@ async function getLatestTemperatureData() {
       FROM sensor_data sd
       INNER JOIN sensors s ON sd.sensor_fk = s.id
       INNER JOIN (
-        SELECT sensor_fk, MAX(timestamp) as max_timestamp
+        SELECT sensor_fk, MAX(received_at) as max_received_at
         FROM sensor_data
         WHERE temperature IS NOT NULL
         GROUP BY sensor_fk
-      ) latest ON sd.sensor_fk = latest.sensor_fk AND sd.timestamp = latest.max_timestamp
+      ) latest ON sd.sensor_fk = latest.sensor_fk AND sd.received_at = latest.max_received_at
       WHERE sd.temperature IS NOT NULL
-      ORDER BY sd.timestamp DESC
+      ORDER BY sd.received_at DESC
     `);
     return rows;
   } finally {
@@ -301,13 +295,13 @@ async function getLatestPresenceData() {
       FROM sensor_data sd
       INNER JOIN sensors s ON sd.sensor_fk = s.id
       INNER JOIN (
-        SELECT sensor_fk, MAX(timestamp) as max_timestamp
+        SELECT sensor_fk, MAX(received_at) as max_received_at
         FROM sensor_data
         WHERE presence IS NOT NULL
         GROUP BY sensor_fk
-      ) latest ON sd.sensor_fk = latest.sensor_fk AND sd.timestamp = latest.max_timestamp
+      ) latest ON sd.sensor_fk = latest.sensor_fk AND sd.received_at = latest.max_received_at
       WHERE sd.presence IS NOT NULL
-      ORDER BY sd.timestamp DESC
+      ORDER BY sd.received_at DESC
     `);
     return rows;
   } finally {
@@ -335,13 +329,13 @@ async function getSensorStats() {
       "SELECT COUNT(*) as count FROM sensor_data WHERE presence IS NOT NULL"
     );
     const lastMessage = await conn.query(
-      "SELECT timestamp FROM sensor_data ORDER BY timestamp DESC LIMIT 1"
+      "SELECT received_at FROM sensor_data ORDER BY received_at DESC LIMIT 1"
     );
     const avgTemperature = await conn.query(
       "SELECT AVG(temperature) as avg FROM sensor_data WHERE temperature IS NOT NULL"
     );
     const activePresence = await conn.query(
-      "SELECT COUNT(*) as count FROM sensor_data sd INNER JOIN (SELECT sensor_fk, MAX(timestamp) as max_ts FROM sensor_data WHERE presence IS NOT NULL GROUP BY sensor_fk) latest ON sd.sensor_fk = latest.sensor_fk AND sd.timestamp = latest.max_ts WHERE sd.presence = true"
+      "SELECT COUNT(*) as count FROM sensor_data sd INNER JOIN (SELECT sensor_fk, MAX(received_at) as max_ts FROM sensor_data WHERE presence IS NOT NULL GROUP BY sensor_fk) latest ON sd.sensor_fk = latest.sensor_fk AND sd.received_at = latest.max_ts WHERE sd.presence = true"
     );
 
     return {
@@ -349,7 +343,7 @@ async function getSensorStats() {
       uniqueSensors: Number(uniqueSensors[0].count),
       temperatureReadings: Number(temperatureReadings[0].count),
       presenceReadings: Number(presenceReadings[0].count),
-      lastMessageAt: lastMessage[0]?.timestamp || null,
+      lastMessageAt: lastMessage[0]?.received_at || null,
       avgTemperature: avgTemperature[0]?.avg ? Number(avgTemperature[0].avg).toFixed(2) : null,
       activePresenceCount: Number(activePresence[0].count)
     };
