@@ -147,7 +147,6 @@ async function updateSensor(sensorId, data) {
  * Insère des données de capteur dans la base
  * @param {object} data - Données du message MQTT
  * @param {string} data.sensor_id - ID unique du capteur Arduino
- * @param {string} data.timestamp - Timestamp ISO de la mesure
  * @param {number} [data.temperature] - Température mesurée
  * @param {boolean} [data.presence] - Présence détectée
  * @returns {Promise<object>}
@@ -158,8 +157,8 @@ async function insertSensorData(data) {
     // Récupérer ou créer le capteur
     const sensorFk = await getOrCreateSensor(data.sensor_id);
 
-    // Parser le timestamp
-    const timestamp = data.timestamp ? new Date(data.timestamp) : new Date();
+    // Utiliser l'heure du serveur Node.js (les Arduino n'ont pas d'horloge)
+    const timestamp = new Date();
 
     // Insérer les données
     const result = await conn.query(
