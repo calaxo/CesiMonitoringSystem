@@ -41,26 +41,26 @@ jobs:
             type=sha,prefix=sha-
             type=raw,value=latest
 
-      - name: Use Node.js 18
+      - name: Use Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: |
-            hutcvite/hutc-vite-app/package-lock.json
+            FRONT/package-lock.json
 
       - name: Install deps (Vite app)
-        working-directory: hutcvite/hutc-vite-app
+        working-directory: FRONT
         run: npm ci
 
 
 
 
       - name: Build Vite assets
-        working-directory: hutcvite/hutc-vite-app
+        working-directory: FRONT
 
         run: npm run build
-        # NOTE: la sortie est configurée vers ../../BACK/assets via vite.config.js
+        # NOTE: la sortie est configurée vers ../BACK/assets via vite.config.js
 
       - name: List generated assets (debug)
         run: |
@@ -75,8 +75,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./BACK
-          file: ./BACK/Dockerfile
+          context: .
+          file: ./Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

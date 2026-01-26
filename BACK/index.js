@@ -1,104 +1,76 @@
+require("dotenv").config();
+
 const express = require("express");
-const bodyParser = require("body-parser");
-const path = require("path");
-const fs = require("fs");
+const cors = require("cors");
+
+const { setupWebRoutes, setup404Handler } = require("./web");
+const { setupApiRoutes } = require("./api");
+const { initDatabase, closeDatabase } = require("./db");
+const { initMQTT, closeMQTT } = require("./mqtt");
+
 const app = express();
 
-// app.use(function (req, res, next) {
-//   res.setHeader(
-//     "Content-Security-Policy-Report-Only",
-//     "default-src 'self'; font-src 'self' fonts.gstatic.com https://fonts.cdnfonts.com ; script-src 'self';style-src 'self' https://fonts.googleapis.com https://fonts.cdnfonts.com; frame-src 'self'",
-//   );
-//   next();
-// });
+// Middlewares globaux
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.use(bodyParser.json());
+// Configuration des routes
+setupApiRoutes(app);    // Routes API (/api/...)
+setupWebRoutes(app);    // Routes web statiques
+setup404Handler(app);   // Handler 404 (doit être en dernier)
 
-// Middleware to serve static files recursively
-function serveStaticRecursive(rootDir) {
-  return function (req, res, next) {
-    const filePath = path.join(rootDir, req.path);
-    if (fs.existsSync(filePath)) {
-      res.sendFile(filePath);
-    } else {
-      next();
+/**
+ * Démarre le serveur
+ */
+async function startServer() {
+  try {
+    // Initialiser la base de données
+    console.log("🚀 Démarrage du serveur...");
+    await initDatabase();
+
+    // Initialiser MQTT (optionnel - continue même en cas d'échec)
+    try {
+      await initMQTT();
+    } catch (err) {
+      console.warn("⚠️  MQTT non disponible:", err.message);
+      console.warn("   Le serveur continue sans MQTT");
     }
-  };
+
+    // Démarrer le serveur HTTP
+    const PORT = process.env.PORT || 5500;
+    const server = app.listen(PORT, () => {
+      console.log(`✅ Serveur démarré sur le port ${PORT}`);
+      console.log(`   - Web: http://localhost:${PORT}`);
+      console.log(`   - API: http://localhost:${PORT}/api`);
+    });
+
+    // Gestion de l'arrêt propre
+    const shutdown = async (signal) => {
+      console.log(`\n📴 Signal ${signal} reçu. Arrêt en cours...`);
+      
+      server.close(async () => {
+        await closeMQTT();
+        await closeDatabase();
+        console.log("👋 Serveur arrêté proprement");
+        process.exit(0);
+      });
+
+      // Force exit après 10 secondes
+      setTimeout(() => {
+        console.error("⚠️  Arrêt forcé après timeout");
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
+
+  } catch (err) {
+    console.error("❌ Erreur fatale au démarrage:", err);
+    process.exit(1);
+  }
 }
 
-// Serve static files recursively from the 'assets' directory
-app.use(serveStaticRecursive(path.join(__dirname, "assets")));
-
-// Define your routes
-app.get("/", (req, res) => {
-  res.header("Content-type", "text/html");
-  res.sendFile(path.join(__dirname, "/assets/index.html"));
-  console.log("test", "requete", req);
-});
-
-app.get("/about", (req, res) => {
-  res.header("Content-type", "text/html");
-  res.sendFile(path.join(__dirname + "/assets/index.html"));
-  console.log("testacceuil", "requete", req.headers);
-});
-
-app.get("/fleet", (req, res) => {
-  res.header("Content-type", "text/html");
-  res.sendFile(path.join(__dirname + "/assets/index.html"));
-});
-
-app.get("/favicon.ico", (req, res) => {
-  res.header("Content-type", "image/x-icon");
-  res.sendFile(path.join(__dirname + "/assets/favicon.ico"));
-  console.log("testcss", "requete", req.headers);
-}
-);
-
-app.get("/courses", (req, res) => {
-  res.header("Content-type", "text/html");
-  res.sendFile(path.join(__dirname + "/assets/index.html"));
-});
-
-app.get("/contact", (req, res) => {
-  res.header("Content-type", "text/html");
-  res.sendFile(path.join(__dirname + "/assets/index.html"));
-});
-
-app.get("/job", (req, res) => {
-  res.header("Content-type", "text/html");
-  res.sendFile(path.join(__dirname + "/assets/index.html"));
-});
-
-
-app.get("/legal", (req, res) => {
-  res.header("Content-type", "text/html");
-  res.sendFile(path.join(__dirname + "/assets/index.html"));
-});
-
-app.get("/privacy", (req, res) => {
-  res.header("Content-type", "text/html");
-  res.sendFile(path.join(__dirname + "/assets/index.html"));
-});
-
-app.get("/certif", (req, res) => {
-  res.header("Content-type", "text/html");
-  res.sendFile(path.join(__dirname + "/assets/index.html"));
-});
-
-app.get("/favicon.ico", (req, res) => {
-  res.header("Content-type", "image/x-icon");
-  res.sendFile(path.join(__dirname + "/assets/favicon.ico"));
-  console.log("testcss", "requete", req.headers);
-});
-
-// Add more routes as needed...
-
-// Catch 404 and serve the default index.html
-app.use((req, res) => {
-  res.status(404).sendFile(path.join(__dirname, "/assets/index.html"));
-});
-
-const server = app.listen(process.env.PORT || 5500, () => {
-  const { port } = server.address();
-  console.log(`Le serveur tourne sur le PORT ${port}`);
-});
+// Démarrer le serveur
+startServer();
