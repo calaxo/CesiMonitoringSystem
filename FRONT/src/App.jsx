@@ -13,12 +13,12 @@ import './App.css';
 
 import SAMPLE_BUILDING from './data/salle';
 
-// Sample building data - Updated based on evacuation plans
+// Exemple de données de bâtiment - Mis à jour en fonction des plans d'évacuation
 
 
 function App() {
   const [mqttConfig, setMqttConfig] = useState(null);
-  const [fullscreenMode, setFullscreenMode] = useState(null); // 'kpi' or 'floorplan' or null
+  const [fullscreenMode, setFullscreenMode] = useState(null); // 'kpi' ou 'floorplan' ou null
   const {
     floorPlans,
     selectedFloor,
@@ -51,7 +51,7 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>CESI Monitoring System</h1>
+        <h1>Système de Surveillance CESI</h1>
         <ConnectionStatus isConnected={isConnected} error={mqttError || error} />
       </header>
 
@@ -62,9 +62,9 @@ function App() {
           <button
             className="fullscreen-close-btn"
             onClick={() => setFullscreenMode(null)}
-            title="Exit fullscreen"
+            title="Quitter le plein écran"
           >
-            ✕
+            ×
           </button>
           {fullscreenMode === 'floorplan' && currentFloor ? (
             <BuildingFloorPlan
@@ -106,7 +106,7 @@ function App() {
                       />
                     ) : (
                       <div className="no-floor">
-                        <p>No floor selected. Please select a floor to view.</p>
+                        <p>Aucun étage sélectionné. Veuillez sélectionner un étage pour voir le plan.</p>
                       </div>
                     )}
                   </div>
@@ -131,8 +131,8 @@ function App() {
       {!fullscreenMode && (
         <footer className="app-footer">
           <p>
-            Building Monitoring Dashboard • Last Update:{' '}
-            {new Date().toLocaleTimeString()}
+            Tableau de Bord de Surveillance du Bâtiment • Dernière mise à jour:{' '}
+            {new Date().toLocaleTimeString('fr-FR')}
           </p>
         </footer>
       )}

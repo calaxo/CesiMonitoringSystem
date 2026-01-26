@@ -10,13 +10,13 @@ export const TabNavigation = () => {
         className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
         onClick={() => setActiveTab('dashboard')}
       >
-        📐 Dashboard Salles
+        Tableau de Bord Salles
       </button>
       <button
         className={`tab-button ${activeTab === 'kpi' ? 'active' : ''}`}
         onClick={() => setActiveTab('kpi')}
       >
-        📊 Statistiques KPI
+        Statistiques KPI
       </button>
     </div>
   );

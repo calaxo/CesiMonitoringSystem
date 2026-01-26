@@ -8,7 +8,7 @@ export const ConnectionStatus = ({
     <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
       <div className="status-indicator">
         <div className={`status-dot ${isConnected ? 'active' : ''}`} />
-        <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
+        <span>{isConnected ? 'Connecté' : 'Déconnecté'}</span>
       </div>
       {error && <div className="error-text">{error}</div>}
     </div>

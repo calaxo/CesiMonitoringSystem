@@ -32,15 +32,15 @@ export const MQTTConfigPanel = ({
 
   return (
     <div className="mqtt-config-panel">
-      <h3>MQTT Configuration</h3>
+      <h3>Configuration MQTT</h3>
       <form onSubmit={handleConnect}>
         <div className="form-group">
-          <label>Broker URL:</label>
+          <label>URL du Broker:</label>
           <input
             type="text"
             value={brokerUrl}
             onChange={(e) => setBrokerUrl(e.target.value)}
-            placeholder="e.g., broker.hivemq.com"
+            placeholder="ex: broker.hivemq.com"
           />
         </div>
 
@@ -54,7 +54,7 @@ export const MQTTConfigPanel = ({
         </div>
 
         <div className="form-group">
-          <label>Client ID:</label>
+          <label>ID Client:</label>
           <input
             type="text"
             value={clientId}
@@ -63,27 +63,27 @@ export const MQTTConfigPanel = ({
         </div>
 
         <div className="form-group">
-          <label>Username (optional):</label>
+          <label>Nom d'utilisateur (optionnel):</label>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Leave empty if not required"
+            placeholder="Laisser vide si non requis"
           />
         </div>
 
         <div className="form-group">
-          <label>Password (optional):</label>
+          <label>Mot de passe (optionnel):</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Leave empty if not required"
+            placeholder="Laisser vide si non requis"
           />
         </div>
 
         <button type="submit" disabled={isConnecting}>
-          {isConnecting ? 'Connecting...' : 'Connect'}
+          {isConnecting ? 'Connexion...' : 'Se connecter'}
         </button>
 
         {error && <div className="error-message">{error}</div>}

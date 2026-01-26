@@ -138,7 +138,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
   return (
     <div className="kpi-stats-panel">
       <div className="kpi-header">
-        <h2>📊 Statistiques KPI - Température & Présence</h2>
+        <h2>Statistiques KPI - Température & Présence</h2>
         {onFullscreen && !isFullscreen && (
           <button
             className="fullscreen-btn"
@@ -199,7 +199,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
         <>
           {/* Graphique température */}
           <div className="chart-container">
-            <h3>🌡️ Courbe de Température (°C)</h3>
+            <h3>Courbe de Température (°C)</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={temperatureChartData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -243,7 +243,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
 
           {/* Graphique présence en barres (adapté à la période) */}
           <div className="chart-container">
-            <h3>👥 Taux de Présence - {selectedPeriod === 'minute' ? 'Par Minute' : selectedPeriod === 'hour' ? 'Par Heure' : selectedPeriod === 'day' ? 'Par Jour' : selectedPeriod === 'week' ? 'Par Semaine' : 'Par Mois'}</h3>
+            <h3>Taux de Présence - {selectedPeriod === 'minute' ? 'Par Minute' : selectedPeriod === 'hour' ? 'Par Heure' : selectedPeriod === 'day' ? 'Par Jour' : selectedPeriod === 'week' ? 'Par Semaine' : 'Par Mois'}</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={presenceBarData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -266,7 +266,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
 
           {/* Résumé statistiques */}
           <div className="stats-summary">
-            <h3>📈 Résumé</h3>
+            <h3>Résumé</h3>
             <div className="summary-items">
               <div className="summary-item">
                 <strong>Nombre de périodes:</strong>
@@ -308,7 +308,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
         </>
       ) : (
         <div className="no-data">
-          <p>❌ Aucune donnée disponible. Assurez-vous que les capteurs envoient des données.</p>
+          <p>Aucune donnée disponible. Assurez-vous que les capteurs envoient des données.</p>
         </div>
       )}
     </div>

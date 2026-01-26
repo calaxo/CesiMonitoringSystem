@@ -257,7 +257,7 @@ export const BuildingFloorPlan = ({
                   fontSize="14"
                   fill={isOccupied ? '#e74c3c' : '#999'}
                 >
-                  {isOccupied ? '👤 Occupied' : 'Empty'}
+                  {isOccupied ? 'Occupée' : 'Vide'}
                 </text>
               </g>
             );
