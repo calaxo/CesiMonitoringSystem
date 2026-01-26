@@ -7,7 +7,7 @@ export const FloorSelector = ({
 }) => {
   return (
     <div className="floor-selector">
-      <h3>Floors</h3>
+      <h3>Étages</h3>
       <div className="floor-buttons">
         {floors.map((floor) => (
           <button

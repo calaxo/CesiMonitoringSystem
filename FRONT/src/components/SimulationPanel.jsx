@@ -60,14 +60,14 @@ export function SimulationPanel() {
           className={`simulation-btn ${isRunning ? 'active' : ''}`}
           onClick={toggleSimulation}
         >
-          {isRunning ? '⏸ Arrêter Simulation' : '▶ Démarrer Simulation'}
+          {isRunning ? 'Arrêter Simulation' : 'Démarrer Simulation'}
         </button>
         <button className="simulation-btn simulate-once" onClick={handleStartOnce}>
-          🎲 Simuler Une Fois
+          Simuler Une Fois
         </button>
       </div>
       <p className="simulation-status">
-        {isRunning ? '🟢 Simulation active' : '⚫ Simulation arrêtée'}
+        {isRunning ? 'Simulation active' : 'Simulation arrêtée'}
       </p>
     </div>
   );

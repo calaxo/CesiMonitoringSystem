@@ -4,6 +4,8 @@ import { useBuildingStore } from '../store/buildingStore';
 export class MQTTService {
   client = null;
   messageHandlers = new Map();
+  connectionAttempts = 0;
+  maxConnectionAttempts = 5;
 
   async connect(config) {
     return new Promise((resolve, reject) => {
@@ -13,18 +15,55 @@ export class MQTTService {
           clientId: config.clientId || `mqtt-client-${Date.now()}`,
           username: config.username,
           password: config.password,
-          reconnectPeriod: 1000,
+          reconnectPeriod: this.connectionAttempts >= this.maxConnectionAttempts ? 0 : 1000,
           connectTimeout: 30 * 1000,
-          protocol: 'wss', // Use WebSocket Secure
         };
 
-        const brokerUrl = config.brokerUrl.startsWith('ws')
-          ? config.brokerUrl
-          : `wss://${config.brokerUrl}:${config.port || 8883}/mqtt`;
+        // Determine the protocol and format the URL
+        let brokerUrl = config.brokerUrl;
+        
+        if (!brokerUrl.startsWith('mqtt://') && !brokerUrl.startsWith('mqtts://') && 
+            !brokerUrl.startsWith('ws://') && !brokerUrl.startsWith('wss://')) {
+          // URL without protocol - add it based on config
+          const protocol = config.protocol || 'mqtt'; // mqtt, mqtts, ws, wss
+          const port = config.port || (protocol === 'mqtts' ? 8883 : protocol.includes('ws') ? 8080 : 1883);
+          
+          if (protocol === 'ws' || protocol === 'wss') {
+            brokerUrl = `${protocol}://${config.brokerUrl}:${port}/mqtt`;
+          } else {
+            brokerUrl = `${protocol}://${config.brokerUrl}:${port}`;
+          }
+        }
 
+        console.log('Connecting to MQTT broker:', brokerUrl);
         this.client = mqtt.connect(brokerUrl, options);
 
+        // Set a timeout for connection attempt
+        const connectionTimeout = setTimeout(() => {
+          if (this.client && !this.client.connected) {
+            console.error('MQTT Connection timeout');
+            this.connectionAttempts++;
+            this.client.end();
+            this.client = null;
+            
+            const errorMessage = this.connectionAttempts >= this.maxConnectionAttempts
+              ? `Connection failed after ${this.maxConnectionAttempts} attempts. Please check your broker settings.`
+              : `Connection timeout - unable to reach broker (attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})`;
+            
+            const error = new Error(errorMessage);
+            useBuildingStore.getState().setError(`MQTT Error: ${errorMessage}`);
+            useBuildingStore.getState().setConnectionStatus(false);
+            
+            if (this.connectionAttempts >= this.maxConnectionAttempts) {
+              this.connectionAttempts = 0; // Reset for next user attempt
+            }
+            reject(error);
+          }
+        }, 35000); // Slightly more than connectTimeout
+
         this.client.on('connect', () => {
+          clearTimeout(connectionTimeout);
+          this.connectionAttempts = 0; // Reset on successful connection
           console.log('MQTT Connected');
           useBuildingStore.getState().setConnectionStatus(true);
           useBuildingStore.getState().setError(null);
@@ -41,9 +80,24 @@ export class MQTTService {
         });
 
         this.client.on('error', (error) => {
+          clearTimeout(connectionTimeout);
+          this.connectionAttempts++;
           console.error('MQTT Error:', error);
-          useBuildingStore.getState().setError(`MQTT Error: ${error.message}`);
-          reject(error);
+          
+          // Disable reconnect after max attempts
+          if (this.connectionAttempts >= this.maxConnectionAttempts) {
+            this.client.end();
+            this.client = null;
+            const errorMessage = `Connection failed after ${this.maxConnectionAttempts} attempts. Please check your broker settings.`;
+            useBuildingStore.getState().setError(`MQTT Error: ${errorMessage}`);
+            useBuildingStore.getState().setConnectionStatus(false);
+            this.connectionAttempts = 0; // Reset for next user attempt
+            reject(new Error(errorMessage));
+          } else {
+            const errorMessage = error.message || 'Unknown connection error';
+            useBuildingStore.getState().setError(`MQTT Error: ${errorMessage} (attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})`);
+            useBuildingStore.getState().setConnectionStatus(false);
+          }
         });
 
         this.client.on('disconnect', () => {
@@ -51,6 +105,10 @@ export class MQTTService {
           useBuildingStore.getState().setConnectionStatus(false);
         });
       } catch (error) {
+        this.connectionAttempts++;
+        console.error('MQTT Connection error:', error);
+        useBuildingStore.getState().setError(`MQTT Error: ${error.message}`);
+        useBuildingStore.getState().setConnectionStatus(false);
         reject(error);
       }
     });

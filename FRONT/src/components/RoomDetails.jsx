@@ -8,7 +8,7 @@ export const RoomDetails = ({
 
   return (
     <div className="room-details">
-      <h3>Room Details</h3>
+      <h3>Détails des Salles</h3>
       <div className="room-list">
         {sortedRooms.map((room) => {
           const data = sensorData.get(room.id);
@@ -21,7 +21,7 @@ export const RoomDetails = ({
                     data?.occupied ? 'occupied' : 'empty'
                   }`}
                 >
-                  {data?.occupied ? '👤 Occupied' : 'Empty'}
+                  {data?.occupied ? 'Occupée' : 'Vide'}
                 </span>
               </div>
 
@@ -29,26 +29,26 @@ export const RoomDetails = ({
                 {data ? (
                   <>
                     <div className="info-item">
-                      <span className="label">Temperature:</span>
+                      <span className="label">Température:</span>
                       <span className="value">
                         {data.temperature.toFixed(1)}°C
                       </span>
                     </div>
                     {data.humidity && (
                       <div className="info-item">
-                        <span className="label">Humidity:</span>
+                        <span className="label">Humidité:</span>
                         <span className="value">{data.humidity}%</span>
                       </div>
                     )}
                     <div className="info-item">
-                      <span className="label">Last Update:</span>
+                      <span className="label">Dernière mise à jour:</span>
                       <span className="value">
                         {new Date(data.timestamp).toLocaleTimeString()}
                       </span>
                     </div>
                   </>
                 ) : (
-                  <div className="no-data">No sensor data available</div>
+                  <div className="no-data">Aucune donnée de capteur disponible</div>
                 )}
               </div>
             </div>

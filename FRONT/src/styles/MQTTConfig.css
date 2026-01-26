@@ -50,6 +50,8 @@
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
+  width: 100%;
+  margin-top: 10px;
 }
 
 .mqtt-config-panel button:hover:not(:disabled) {
@@ -62,11 +64,25 @@
 }
 
 .error-message {
-  color: #e74c3c;
-  background-color: #fdeaea;
-  padding: 10px;
+  color: #c0392b;
+  background-color: #fadbd8;
+  padding: 12px 15px;
   border-radius: 4px;
-  margin-top: 10px;
-  border-left: 3px solid #e74c3c;
+  margin-top: 12px;
+  border-left: 4px solid #c0392b;
   font-size: 13px;
+  font-weight: 500;
+  word-break: break-word;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
