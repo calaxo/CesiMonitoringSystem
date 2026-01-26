@@ -1,9 +1,8 @@
-version: "3.8"
 
 services:
   back:
 
-    image: ghcr.io/calaxo/CesiMonitoringSystem:latest
+    image: ghcr.io/calaxo/cesimonitoringsystem:latest
     container_name: hutc-back
 
     ports:
@@ -17,9 +16,9 @@ services:
       GLPI_DB_HOST: db
       GLPI_DB_PORT: 3306
       GLPI_SKIP_AUTOINSTALL: true
-      GLPI_DB_NAME: ${GLPI_DB_NAME}
-      GLPI_DB_USER: ${GLPI_DB_USER}
-      GLPI_DB_PASSWORD: ${GLPI_DB_PASSWORD}
+      GLPI_DB_NAME: ${DB_NAME}
+      GLPI_DB_USER: ${DB_USER}
+      GLPI_DB_PASSWORD: ${DB_PASSWORD}
       GLPI_SKIP_AUTOUPDATE: false
       NODE_ENV: production
       PORT: 5500
@@ -43,10 +42,10 @@ services:
     container_name: glpi_db
     restart: unless-stopped
     environment:
-      MARIADB_DATABASE: ${GLPI_DB_NAME}
-      MARIADB_USER: ${GLPI_DB_USER}
-      MARIADB_PASSWORD: ${GLPI_DB_PASSWORD}
-      MARIADB_ROOT_PASSWORD: ${GLPI_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${ROOT_PASSWORD}
     healthcheck:
       test: mysqladmin ping -h 127.0.0.1 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
       start_period: 5s
@@ -66,7 +65,7 @@ services:
       PMA_ARBITRARY: 1
       PMA_HOST: db
       PMA_USER: root
-      PMA_PASSWORD: ${GLPI_ROOT_PASSWORD}
+      PMA_PASSWORD: ${ROOT_PASSWORD}
       UPLOAD_LIMIT: 800M
 
 networks:

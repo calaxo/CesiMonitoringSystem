@@ -1,54 +1,67 @@
 # Utilise l'image Node.js officielle comme base
-FROM node:18-alpine AS base
+FROM node:22-alpine AS base
 
-# Installe les dépendances seulement quand nécessaire
-FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
+# ===========================================
+# Étape 1: Build du frontend avec Vite
+# ===========================================
+FROM base AS frontend-builder
+WORKDIR /app/frontend
 
-# Installe les dépendances basées sur le gestionnaire de paquets préféré
-COPY hutc/package.json hutc/package-lock.json* ./
+# Copie les fichiers de dépendances du frontend
+COPY FRONT/package.json FRONT/package-lock.json* ./
+
+# Installe les dépendances du frontend
 RUN npm ci
 
-# Reconstruit le code source seulement quand nécessaire
-FROM base AS builder
+# Copie le code source du frontend
+COPY FRONT/ .
+
+# Build du frontend avec Vite (override le outDir pour générer dans dist)
+RUN npm run build -- --outDir dist
+
+# ===========================================
+# Étape 2: Préparation du backend
+# ===========================================
+FROM base AS backend-deps
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY hutc/ .
 
-# Next.js collecte des données de télémétrie complètement anonymes sur l'utilisation générale.
-# Apprenez-en plus ici: https://nextjs.org/telemetry
-# Décommentez la ligne suivante au cas où vous voudriez désactiver la télémétrie lors du build.
-# ENV NEXT_TELEMETRY_DISABLED=1
+# Copie les fichiers de dépendances du backend
+COPY BACK/package.json BACK/package-lock.json* ./
 
-RUN npm run build
+# Installe les dépendances du backend (production seulement)
+RUN npm ci --only=production
 
-# Image de production, copie tous les fichiers et lance next
+# ===========================================
+# Étape 3: Image de production
+# ===========================================
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-# Décommentez la ligne suivante au cas où vous voudriez désactiver la télémétrie lors du runtime.
-# ENV NEXT_TELEMETRY_DISABLED=1
 
+# Crée un utilisateur non-root pour la sécurité
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN adduser --system --uid 1001 appuser
 
-# Copier les fichiers nécessaires depuis le builder
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/package-lock.json ./package-lock.json
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
+# Copie les dépendances du backend
+COPY --from=backend-deps /app/node_modules ./node_modules
 
-USER nextjs
+# Copie le code du backend
+COPY BACK/ .
 
+# Copie le build du frontend dans le dossier assets du backend
+COPY --from=frontend-builder /app/frontend/dist ./assets
+
+# Change le propriétaire des fichiers
+RUN chown -R appuser:nodejs /app
+
+USER appuser
+
+# Port exposé par le backend
 EXPOSE 3000
 
 ENV PORT=3000
-# définir le nom d'hôte à localhost
 ENV HOSTNAME="0.0.0.0"
 
-# Lancer Next.js en mode production
+# Lance le serveur Node.js
 CMD ["npm", "start"]
