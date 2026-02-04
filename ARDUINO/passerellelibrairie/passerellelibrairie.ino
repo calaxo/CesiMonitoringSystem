@@ -160,6 +160,8 @@ void setup()
     // Pour Arduino UNO : utiliser SoftwareSerial
     // SoftwareSerial loraSerial(2, 3); // RX=2, TX=3
     loraSerial.begin(9600);
+    net.setEncryptionKey(0xCAFEBABE);
+    // net.setEncryptionEnabled(false);
     net.begin(&loraSerial);
 
     // Pour Arduino Mega : utiliser Serial1 (pins 18/19)

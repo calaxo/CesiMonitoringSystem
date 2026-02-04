@@ -43,10 +43,11 @@ void setup()
     if (!bme.begin(0x76))
     { // Adresse I2C du BME280 (0x76 ou 0x77)
         Serial.println("BME280 non trouvé ! Vérifiez le câblage.");
-        while (1)
-            ;
+        while (1);
     }
+    net.setEncryptionKey(0xCAFEBABE);
     Serial.println("BME280 initialisé");
+    // net.setEncryptionEnabled(false);
 
     // Pour Arduino UNO : utiliser SoftwareSerial
     // SoftwareSerial loraSerial(2, 3); // RX=2, TX=3
@@ -55,6 +56,7 @@ void setup()
 
     // Pour Arduino Mega : utiliser Serial1 (pins 18/19)
     Serial1.begin(9600);
+    
     net.begin(&Serial1);
 }
 

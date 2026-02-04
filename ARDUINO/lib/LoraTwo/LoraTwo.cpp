@@ -16,6 +16,10 @@ LoraTwo::LoraTwo(uint8_t myAddr, bool isGateway)
     _seq = 0;
     _recvIdx = 0;
 
+    // Chiffrement activé par défaut
+    _encryptionKey = LORATWO_DEFAULT_KEY;
+    _encryptionEnabled = true;
+
     // Initialiser callback et stockage
     _receiveCallback = NULL;
     _dataAvailable = false;
@@ -93,6 +97,38 @@ void LoraTwo::clearData()
 }
 
 // ===============================
+// CHIFFREMENT
+// ===============================
+void LoraTwo::setEncryptionKey(uint32_t key)
+{
+    _encryptionKey = key;
+}
+
+void LoraTwo::setEncryptionEnabled(bool enabled)
+{
+    _encryptionEnabled = enabled;
+}
+
+// Chiffrement XOR rapide avec PRNG
+// Utilise la clé + numéro de séquence pour générer un keystream unique par message
+void LoraTwo::xorCipher(uint8_t *data, uint8_t len, uint8_t seq)
+{
+    if (!_encryptionEnabled)
+        return;
+
+    // Seed = clé XOR avec séquence pour varier le keystream à chaque message
+    uint32_t seed = _encryptionKey ^ ((uint32_t)seq * 0x9E3779B9);
+
+    for (uint8_t i = 0; i < len; i++)
+    {
+        // PRNG simple et rapide (Linear Congruential Generator)
+        seed = seed * 1103515245 + 12345;
+        uint8_t keystreamByte = (seed >> 16) & 0xFF;
+        data[i] ^= keystreamByte;
+    }
+}
+
+// ===============================
 // ENVOI ASYNCHRONE
 // ===============================
 bool LoraTwo::send(uint8_t dst, uint8_t *data, uint8_t len)
@@ -151,8 +187,18 @@ void LoraTwo::sendPacket(uint8_t dst, LoraTwoPacketType type, uint8_t seq, uint8
     frame[idx++] = seq;
     frame[idx++] = len;
 
-    for (int i = 0; i < len; i++)
-        frame[idx++] = data[i];
+    // Copier les données et les chiffrer (sauf pour ACK et protocole)
+    if (len > 0 && type == L2_PKT_DATA)
+    {
+        memcpy(&frame[idx], data, len);
+        xorCipher(&frame[idx], len, seq);
+        idx += len;
+    }
+    else
+    {
+        for (int i = 0; i < len; i++)
+            frame[idx++] = data[i];
+    }
 
     sprintf(cmd, "AT+TEST=TXLRPKT,\"");
     for (int i = 0; i < idx; i++)
@@ -274,6 +320,9 @@ void LoraTwo::processPacket(LoraTwoPacket &pkt)
     // Stocker et traiter le message DATA reçu
     if (pkt.type == L2_PKT_DATA && pkt.len > 0)
     {
+        // Déchiffrer le payload
+        xorCipher(pkt.payload, pkt.len, pkt.seq);
+
         // Stocker les données
         _lastSender = pkt.src;
         _lastPayloadLen = pkt.len;

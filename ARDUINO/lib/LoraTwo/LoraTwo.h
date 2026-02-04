@@ -12,6 +12,7 @@
  *   - Retries automatiques si pas de réponse
  *   - Découverte automatique des nodes
  *   - Broadcast vers tous les appareils
+ *   - CHIFFREMENT XOR des trames (rapide et léger)
  *
  * UTILISATION RAPIDE:
  *
@@ -21,10 +22,13 @@
  *   // Créer un node (capteur)
  *   LoraTwo net(0x02);
  *
+ *   // Définir la clé de chiffrement (MÊME clé sur tous les appareils!)
+ *   net.setEncryptionKey(0xDEADBEEF);
+ *
  *   // Initialiser
  *   net.begin(&Serial1);
  *
- *   // Envoyer un message
+ *   // Envoyer un message (sera chiffré automatiquement)
  *   char msg[] = "Hello!";
  *   net.send(0x00, (uint8_t*)msg, strlen(msg));
  *
@@ -39,6 +43,12 @@
 
 #include <Arduino.h>
 #include <Stream.h>
+
+// ===============================
+// CLÉ DE CHIFFREMENT PAR DÉFAUT
+// ===============================
+// IMPORTANT: Change cette valeur et utilise la MÊME sur tous tes appareils!
+#define LORATWO_DEFAULT_KEY 0x12345678
 
 // ===============================
 // CONSTANTES RÉSEAU
@@ -201,6 +211,24 @@ public:
     void setReceiveCallback(LoraReceiveCallback callback);
 
     /*
+     * Définit la clé de chiffrement (32 bits)
+     * IMPORTANT: Utiliser la MÊME clé sur tous les appareils du réseau!
+     *
+     * @param key   Clé 32 bits (ex: 0xDEADBEEF)
+     *
+     * Exemple:
+     *   net.setEncryptionKey(0xCAFEBABE);
+     */
+    void setEncryptionKey(uint32_t key);
+
+    /*
+     * Active ou désactive le chiffrement (activé par défaut)
+     *
+     * @param enabled   true = chiffré, false = non chiffré
+     */
+    void setEncryptionEnabled(bool enabled);
+
+    /*
      * Vérifie si de nouvelles données sont disponibles
      */
     bool available();
@@ -230,6 +258,10 @@ private:
     bool _isGateway;
     uint8_t _seq;
 
+    // Chiffrement
+    uint32_t _encryptionKey;
+    bool _encryptionEnabled;
+
     // Callback pour réception
     LoraReceiveCallback _receiveCallback;
 
@@ -252,6 +284,9 @@ private:
     bool parsePacket(char *raw, LoraTwoPacket &pkt);
     void processPacket(LoraTwoPacket &pkt);
     int addPending(uint8_t dst, LoraTwoPacketType type, uint8_t *data, uint8_t len);
+
+    // Chiffrement XOR rapide
+    void xorCipher(uint8_t *data, uint8_t len, uint8_t seq);
 };
 
 #endif
