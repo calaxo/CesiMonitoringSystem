@@ -98,17 +98,20 @@ void connectToWifi()
     Serial.printf("[WIFI] Connexion à %s", WIFI_SSID);
 
     WiFi.mode(WIFI_STA);
-    
+
 #ifdef USE_STATIC_IP
     // Configuration IP statique (réseau sans DHCP)
     IPAddress ip(IP_ADDRESS);
     IPAddress gateway(GATEWAY_IP);
     IPAddress subnet(SUBNET);
     IPAddress dns(DNS);
-    
-    if (!WiFi.config(ip, gateway, subnet, dns)) {
+
+    if (!WiFi.config(ip, gateway, subnet, dns))
+    {
         Serial.println("\n[WIFI] Erreur config IP statique!");
-    } else {
+    }
+    else
+    {
         Serial.printf(" (IP fixe: %d.%d.%d.%d)", ip[0], ip[1], ip[2], ip[3]);
     }
 #endif

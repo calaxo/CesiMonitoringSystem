@@ -214,11 +214,15 @@ export class MQTTService {
           ? payload.occupied
           : payload.presence !== undefined
             ? payload.presence
-            : false,
-      temperature: payload.temperature || 0,
+            : payload.m !== undefined
+              ? payload.m
+              : false,
+      temperature: payload.temperature || payload.t || 0,
       humidity: payload.humidity,
       lastUpdate: payload.timestamp || new Date().toISOString(),
       sensorId: payload.sensor_id,
+      rssi: payload.rssi,
+      snr: payload.snr,
       source: "mqtt", // Marqueur pour identifier les données temps réel
     };
 
