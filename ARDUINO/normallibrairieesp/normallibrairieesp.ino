@@ -42,6 +42,9 @@ const size_t HMAC_KEY_LEN = sizeof(HMAC_KEY);
 #define HC_SR501_PIN 13
 #define PIR_INIT_TIME_MS 30000  // Temps d'initialisation du PIR (30 secondes)
 
+// Pins LED Chainable (Grove v2.0)
+#define LED_PIN 2   // LED intégrée ESP32
+
 // Intervalle d'envoi
 #define SEND_INTERVAL_MS 5000  // 5 secondes
 
@@ -55,9 +58,19 @@ const size_t HMAC_KEY_LEN = sizeof(HMAC_KEY);
 LoraTwo net(NODE_ADDRESS);
 Adafruit_BME280 bme;
 
+// LED Chainable avec FastLED
+#define NUM_LEDS 1
+// CRGB leds[NUM_LEDS];  // Non utilisé avec LED intégrée
+
 // Variables pour la tâche de lecture capteurs
 TaskHandle_t sensorTaskHandle = NULL;
+TaskHandle_t presenceTaskHandle = NULL;
 QueueHandle_t sensorQueue;
+
+// Variables de présence (partagées avec synchronisation)
+volatile uint16_t presenceCount = 0;      // Compteur de présences détectées
+volatile bool currentPresence = false;     // État actuel (pour affichage temps réel)
+volatile bool lastPresenceState = false;   // Dernier état pour éviter les logs répétés
 
 // Buffers globaux pour éviter débordement stack
 static char g_messageForHmac[80];
@@ -110,12 +123,62 @@ void onLoraEvent(uint8_t eventType, uint8_t addr, uint8_t seq) {
 }
 
 // ===============================
+// TÂCHE CALCUL PRÉSENCE (Core 0)
+// ===============================
+void presenceTask(void *parameter) {
+    bool lastMotionState = false;
+    unsigned long lastMotionDetectedTime = millis();  // Initialiser au temps actuel
+    unsigned long lastMotionEventTime = 0;  // Débounce : ignorer les événements rapides
+    const unsigned long MOTION_HOLD_MS = 2000;  // Garder LED ON pendant 2 sec
+    const unsigned long MOTION_DEBOUNCE_MS = 500;  // Ignorer les événements < 500ms après le dernier
+    
+    // Démarrer en OFF
+    digitalWrite(LED_PIN, LOW);
+    Serial.println("[INIT] LED démarrée en OFF");
+    
+    while (true) {
+        bool currentMotionState = digitalRead(HC_SR501_PIN);
+        unsigned long now = millis();
+        
+        // Détecter transition LOW -> HIGH (mouvement commence)
+        if (currentMotionState && !lastMotionState) {
+            // Débounce : accepter uniquement si assez de temps depuis le dernier événement
+            if (now - lastMotionEventTime > MOTION_DEBOUNCE_MS) {
+                lastMotionEventTime = now;
+                lastMotionDetectedTime = now;
+                presenceCount++;
+                Serial.printf("[DETECTED] Mouvement! (event_time=%lu)\n", now);
+            }
+        }
+        lastMotionState = currentMotionState;
+        
+        // Contrôler la LED selon le temps écoulé
+        if (now - lastMotionDetectedTime < MOTION_HOLD_MS) {
+            // LED ON si mouvement récent (dans les 2 dernières secondes)
+            digitalWrite(LED_PIN, HIGH);
+        } else {
+            // LED OFF sinon
+            digitalWrite(LED_PIN, LOW);
+        }
+        
+        // Afficher l'état toutes les 3 secondes
+        static unsigned long lastPrintTime = 0;
+        if (now - lastPrintTime > 3000) {
+            lastPrintTime = now;
+            bool ledState = (now - lastMotionDetectedTime < MOTION_HOLD_MS);
+            Serial.printf("[STATUS] PIR=%d | LED=%s | Count=%d\n", 
+                         currentMotionState ? 1 : 0, ledState ? "ON" : "OFF", presenceCount);
+        }
+        
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
+
+// ===============================
 // TÂCHE LECTURE CAPTEURS (Core 1)
 // ===============================
 void sensorTask(void *parameter) {
     SensorData data;
-    bool lastMotionState = false;
-    unsigned long lastMotionTime = 0;  // Timestamp du dernier mouvement détecté
     
     while (true) {
         // Lire les capteurs BME280
@@ -124,34 +187,14 @@ void sensorTask(void *parameter) {
         data.pressure = bme.readPressure() / 100.0F; // hPa
         data.valid = !isnan(data.temperature);
         
-        // Lire le capteur HC-SR501 (détection de mouvement en temps réel)
-        bool currentMotionState = digitalRead(HC_SR501_PIN);
-        
-        // Détecter les transitions pour enregistrer le timestamp
-        if (currentMotionState && !lastMotionState) {
-            lastMotionTime = millis();
-            Serial.println("[PIR] ON");
-        }
-        
-        if (!currentMotionState && lastMotionState) {
-            Serial.println("[PIR] OFF");
-        }
-        
-        lastMotionState = currentMotionState;
-        
-        // Vérifier si un mouvement a été détecté dans les 5 dernières secondes
-        unsigned long currentTime = millis();
-        if (currentTime - lastMotionTime < SEND_INTERVAL_MS) {
-            data.motionDetected = true;
-        } else {
-            data.motionDetected = false;
-        }
+        // La présence sera calculée par la tâche presenceTask
+        data.motionDetected = false;  // Sera utilisé pour le message
         
         // Envoyer à la queue
         xQueueOverwrite(sensorQueue, &data);
         
         // Attendre avant prochaine lecture
-        vTaskDelay(pdMS_TO_TICKS(100));  // Lecture tous les 100ms
+        vTaskDelay(pdMS_TO_TICKS(1000));  // Lecture toutes les secondes
     }
 }
 
@@ -175,6 +218,11 @@ void setup()
     // Initialisation HC-SR501
     pinMode(HC_SR501_PIN, INPUT);
     Serial.println("[OK] HC-SR501 initialisé sur GPIO" + String(HC_SR501_PIN));
+    
+    // Initialisation LED intégrée
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);  // LED OFF (active HIGH)
+    Serial.println("[OK] LED intégrée initialisée sur GPIO" + String(LED_PIN));
     
     // Calibration du capteur PIR (30 secondes)
     Serial.print("[PIR] Calibration...");
@@ -216,6 +264,17 @@ void setup()
         1,
         &sensorTaskHandle,
         1  // Core 1
+    );
+    
+    // Créer tâche de calcul présence sur Core 0
+    xTaskCreatePinnedToCore(
+        presenceTask,
+        "Presence",
+        2048,
+        NULL,
+        1,
+        &presenceTaskHandle,
+        0  // Core 0
     );
 
     // Initialiser LoRa
@@ -273,10 +332,11 @@ void loop()
             char tempStr[8];
             dtostrf(data.temperature, 4, 1, tempStr);
             
-            // Utiliser "true" ou "false" pour le booléen mouvement
-            const char* motionStr = data.motionDetected ? "true" : "false";
+            // Déterminer la présence : true si au moins 1 mouvement détecté depuis dernière trame
+            bool presenceDetected = (presenceCount >= 1);
+            const char* motionStr = presenceDetected ? "true" : "false";
             
-            // Créer message pour HMAC (sans HMAC)
+            // Créer message pour HMAC
             snprintf(g_messageForHmac, sizeof(g_messageForHmac), 
                      "{\"t\":%s,\"m\":%s}",
                      tempStr, motionStr);
@@ -289,16 +349,15 @@ void loop()
                      "{\"t\":%s,\"m\":%s,\"hmac\":\"%s\"}",
                      tempStr, motionStr, g_hmacHex);
             
-            if (data.motionDetected) {
-                Serial.print("[TX] PRESENCE: ");
-            } else {
-                Serial.print("[TX] ABSENCE: ");
-            }
-            Serial.println(g_finalMessage);
+            Serial.print("[TX] m:");
+            Serial.println(motionStr);
             
             if (!net.send(GATEWAY_ADDRESS, (uint8_t *)g_finalMessage, strlen(g_finalMessage))) {
                 Serial.println("[ERREUR] Queue pleine!");
             }
+            
+            // Réinitialiser le compteur après envoi
+            presenceCount = 0;
         } else {
             // Pas de données capteur, envoyer heartbeat simple
             snprintf(g_finalMessage, sizeof(g_finalMessage), "{\"status\":\"alive\"}");
