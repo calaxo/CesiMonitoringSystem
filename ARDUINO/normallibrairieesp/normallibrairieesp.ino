@@ -17,6 +17,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include "LoraTwo.h"
+#include <mbedtls/md.h>
 
 // ===============================
 // CONFIGURATION NODE
@@ -28,9 +29,18 @@
 // Clé de chiffrement (DOIT être la même que la gateway!)
 #define LORA_ENCRYPTION_KEY 0xCAFEBABE
 
+// Clé secrète HMAC (DOIT être la même que la gateway!)
+const uint8_t HMAC_KEY[] = {0xCA, 0xFE, 0xBA, 0xBE, 0xDE, 0xAD, 0xBE, 0xEF, 
+                           0xCA, 0xFE, 0xBA, 0xBE, 0xDE, 0xAD, 0xBE, 0xEF};
+const size_t HMAC_KEY_LEN = sizeof(HMAC_KEY);
+
 // Pins LoRa (Serial2 sur ESP32)
 #define LORA_RX_PIN 16
 #define LORA_TX_PIN 17
+
+// Pin HC-SR501 (capteur mouvement PIR)
+#define HC_SR501_PIN 13
+#define PIR_INIT_TIME_MS 30000  // Temps d'initialisation du PIR (30 secondes)
 
 // Intervalle d'envoi
 #define SEND_INTERVAL_MS 5000  // 5 secondes
@@ -49,12 +59,39 @@ Adafruit_BME280 bme;
 TaskHandle_t sensorTaskHandle = NULL;
 QueueHandle_t sensorQueue;
 
+// Buffers globaux pour éviter débordement stack
+static char g_messageForHmac[80];
+static char g_finalMessage[120];   // Réduit de 160
+static uint8_t g_hmac[32];
+static char g_hmacHex[17];         // Réduit de 65 (16 chars + null)
+
 struct SensorData {
     float temperature;
     float humidity;
     float pressure;
+    bool motionDetected;
     bool valid;
 };
+
+// ===============================
+// FONCTION HMAC OPTIMISÉE (8 bytes tronqués)
+// ===============================
+void computeHmac(const char* message, char* hmacHexOutput) {
+    // Calculer le HMAC SHA256
+    mbedtls_md_context_t ctx;
+    mbedtls_md_init(&ctx);
+    mbedtls_md_setup(&ctx, mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), 1);
+    mbedtls_md_hmac_starts(&ctx, HMAC_KEY, HMAC_KEY_LEN);
+    mbedtls_md_hmac_update(&ctx, (uint8_t*)message, strlen(message));
+    mbedtls_md_hmac_finish(&ctx, g_hmac);
+    mbedtls_md_free(&ctx);
+    
+    // Convertir en hex SEULEMENT les 8 premiers bytes (16 chars)
+    memset(hmacHexOutput, 0, 17);
+    for (int i = 0; i < 8; i++) {  // 8 bytes au lieu de 32
+        snprintf(&hmacHexOutput[i*2], 3, "%02x", g_hmac[i]);
+    }
+}
 
 // ===============================
 // CALLBACK ÉVÉNEMENTS LORA
@@ -77,19 +114,44 @@ void onLoraEvent(uint8_t eventType, uint8_t addr, uint8_t seq) {
 // ===============================
 void sensorTask(void *parameter) {
     SensorData data;
+    bool lastMotionState = false;
+    unsigned long lastMotionTime = 0;  // Timestamp du dernier mouvement détecté
     
     while (true) {
-        // Lire les capteurs
+        // Lire les capteurs BME280
         data.temperature = bme.readTemperature();
         data.humidity = bme.readHumidity();
         data.pressure = bme.readPressure() / 100.0F; // hPa
         data.valid = !isnan(data.temperature);
         
+        // Lire le capteur HC-SR501 (détection de mouvement en temps réel)
+        bool currentMotionState = digitalRead(HC_SR501_PIN);
+        
+        // Détecter les transitions pour enregistrer le timestamp
+        if (currentMotionState && !lastMotionState) {
+            lastMotionTime = millis();
+            Serial.println("[PIR] ON");
+        }
+        
+        if (!currentMotionState && lastMotionState) {
+            Serial.println("[PIR] OFF");
+        }
+        
+        lastMotionState = currentMotionState;
+        
+        // Vérifier si un mouvement a été détecté dans les 5 dernières secondes
+        unsigned long currentTime = millis();
+        if (currentTime - lastMotionTime < SEND_INTERVAL_MS) {
+            data.motionDetected = true;
+        } else {
+            data.motionDetected = false;
+        }
+        
         // Envoyer à la queue
         xQueueOverwrite(sensorQueue, &data);
         
         // Attendre avant prochaine lecture
-        vTaskDelay(pdMS_TO_TICKS(1000));  // Lecture toutes les secondes
+        vTaskDelay(pdMS_TO_TICKS(100));  // Lecture tous les 100ms
     }
 }
 
@@ -98,16 +160,28 @@ void sensorTask(void *parameter) {
 // ===============================
 void setup()
 {
-    Serial.begin(115200);
+    Serial.begin(115200);  // Augmenté de 9600 à 115200
     delay(1000);
     
+    // Augmenter la taille du stack du loop (Core 0) via préprocesseur
+    // CONFIG_ARDUINO_LOOP_STACK_SIZE sera utilisé automatiquement
+    
     Serial.println("\n=== NODE LoRa ESP32 ===");
-    Serial.printf("Adresse: 0x%02X\n", NODE_ADDRESS);
-    Serial.printf("CPU: %d MHz, Cores: 2\n", ESP.getCpuFreqMHz());
-    Serial.printf("Free Heap: %d bytes\n", ESP.getFreeHeap());
+    Serial.printf("Addr: 0x%02X | Heap: %d bytes\n", NODE_ADDRESS, ESP.getFreeHeap());
 
     // Initialisation I2C pour BME280
     Wire.begin(21, 22);  // SDA=GPIO21, SCL=GPIO22 (défaut ESP32)
+    
+    // Initialisation HC-SR501
+    pinMode(HC_SR501_PIN, INPUT);
+    Serial.println("[OK] HC-SR501 initialisé sur GPIO" + String(HC_SR501_PIN));
+    
+    // Calibration du capteur PIR (30 secondes)
+    Serial.print("[PIR] Calibration...");
+    for (int i = 30; i > 0; i--) {
+        delay(1000);
+    }
+    Serial.println(" OK");
     
     // Initialisation BME280
     if (!bme.begin(0x76)) {  // ou 0x77 selon le module
@@ -137,7 +211,7 @@ void setup()
     xTaskCreatePinnedToCore(
         sensorTask,
         "Sensors",
-        2048,
+        4096,      // Augmenté de 2048 à 4096
         NULL,
         1,
         &sensorTaskHandle,
@@ -147,6 +221,25 @@ void setup()
     // Initialiser LoRa
     Serial.printf("[LORA] Init sur GPIO%d(RX)/GPIO%d(TX)\n", LORA_RX_PIN, LORA_TX_PIN);
     Serial2.begin(9600, SERIAL_8N1, LORA_RX_PIN, LORA_TX_PIN);
+    
+    // Test de communication avec le module
+    delay(500);
+    Serial.println("[DEBUG] Test de réponse du module LoRa...");
+    Serial2.write("AT\r\n");
+    delay(500);
+    
+    if (Serial2.available()) {
+        String response = "";
+        while (Serial2.available()) {
+            response += (char)Serial2.read();
+        }
+        Serial.printf("[LORA] Module a répondu: %s\n", response.c_str());
+    } else {
+        Serial.println("[ERREUR] Module LoRa NE REPOND PAS! Vérifiez:");
+        Serial.println("  - Alimentation du module");
+        Serial.println("  - Câblage RX/TX (TX ESP->RX module, RX ESP->TX module)");
+        Serial.println("  - Les GPIO 16 et 17 sont libres");
+    }
     
     net.setEncryptionKey(LORA_ENCRYPTION_KEY);
     net.setEventCallback(onLoraEvent);
@@ -161,6 +254,7 @@ void setup()
 // ===============================
 unsigned long lastSend = 0;
 uint32_t messageCount = 0;
+uint16_t motionCounter = 0;  // Compteur pour réinitialisation après envoi
 
 void loop()
 {
@@ -175,31 +269,41 @@ void loop()
         // Récupérer données capteurs depuis la queue
         SensorData data;
         if (xQueuePeek(sensorQueue, &data, 0) == pdTRUE && data.valid) {
-            // Formater le message JSON
-            char message[96];
-            
-            // Convertir les floats en strings (plus fiable sur ESP32)
-            char tempStr[10], humStr[10], pressStr[10];
+            // Convertir température seulement
+            char tempStr[8];
             dtostrf(data.temperature, 4, 1, tempStr);
-            dtostrf(data.humidity, 4, 1, humStr);
-            dtostrf(data.pressure, 6, 1, pressStr);
             
-            snprintf(message, sizeof(message), 
-                     "{\"t\":%s,\"h\":%s,\"p\":%s,\"n\":%d}",
-                     tempStr, humStr, pressStr, messageCount);
-
-            Serial.printf("[TX] Envoi #%d: %s\n", messageCount, message);
+            // Utiliser "true" ou "false" pour le booléen mouvement
+            const char* motionStr = data.motionDetected ? "true" : "false";
             
-            if (!net.send(GATEWAY_ADDRESS, (uint8_t *)message, strlen(message))) {
-                Serial.println("[ERREUR] Queue d'envoi pleine!");
+            // Créer message pour HMAC (sans HMAC)
+            snprintf(g_messageForHmac, sizeof(g_messageForHmac), 
+                     "{\"t\":%s,\"m\":%s}",
+                     tempStr, motionStr);
+            
+            // Calculer HMAC
+            computeHmac(g_messageForHmac, g_hmacHex);
+            
+            // Créer message final avec HMAC
+            snprintf(g_finalMessage, sizeof(g_finalMessage), 
+                     "{\"t\":%s,\"m\":%s,\"hmac\":\"%s\"}",
+                     tempStr, motionStr, g_hmacHex);
+            
+            if (data.motionDetected) {
+                Serial.print("[TX] PRESENCE: ");
+            } else {
+                Serial.print("[TX] ABSENCE: ");
+            }
+            Serial.println(g_finalMessage);
+            
+            if (!net.send(GATEWAY_ADDRESS, (uint8_t *)g_finalMessage, strlen(g_finalMessage))) {
+                Serial.println("[ERREUR] Queue pleine!");
             }
         } else {
-            // Pas de données capteur, envoyer message de test
-            char message[48];
-            snprintf(message, sizeof(message), "{\"status\":\"alive\",\"n\":%d}", messageCount);
-            
-            Serial.printf("[TX] Envoi heartbeat #%d\n", messageCount);
-            net.send(GATEWAY_ADDRESS, (uint8_t *)message, strlen(message));
+            // Pas de données capteur, envoyer heartbeat simple
+            snprintf(g_finalMessage, sizeof(g_finalMessage), "{\"status\":\"alive\"}");
+            Serial.println("[TX] HEARTBEAT");
+            net.send(GATEWAY_ADDRESS, (uint8_t *)g_finalMessage, strlen(g_finalMessage));
         }
     }
 
@@ -208,12 +312,8 @@ void loop()
     if (now - lastStats > 60000) {
         lastStats = now;
         
-        Serial.println("\n--- STATISTIQUES NODE ---");
-        Serial.printf("Messages envoyés: %d\n", messageCount);
-        Serial.printf("Paquets TX: %d\n", net.getPacketsSent());
-        Serial.printf("Paquets perdus: %d\n", net.getPacketsLost());
-        Serial.printf("Free Heap: %d bytes\n", ESP.getFreeHeap());
-        Serial.println("-------------------------\n");
+        Serial.printf("STATS | TX:%d | Lost:%d | Heap:%d\n", 
+                     net.getPacketsSent(), net.getPacketsLost(), ESP.getFreeHeap());
     }
 
     #ifdef ENABLE_DEEP_SLEEP
