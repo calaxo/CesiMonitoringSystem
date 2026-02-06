@@ -11,7 +11,7 @@
  * Protection des ressources partagées via mutex
  */
 
-#include "LoraTwo.h"
+#include "LoraTwoesp.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>

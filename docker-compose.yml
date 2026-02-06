@@ -47,7 +47,7 @@ services:
       MARIADB_PASSWORD: ${DB_PASSWORD}
       MARIADB_ROOT_PASSWORD: ${ROOT_PASSWORD}
     healthcheck:
-      test: mysqladmin ping -h 127.0.0.1 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       start_period: 5s
       interval: 5s
       timeout: 5s
