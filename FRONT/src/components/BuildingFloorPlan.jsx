@@ -302,7 +302,11 @@ export const BuildingFloorPlan = ({
         <div className="legend-item">
           <div
             className="legend-color"
-            style={{ background: "linear-gradient(to right, hsl(240, 70%, 50%), hsl(180, 70%, 50%), hsl(120, 70%, 50%), hsl(60, 70%, 50%), hsl(0, 70%, 50%))", width: "80px" }}
+            style={{
+              background:
+                "linear-gradient(to right, hsl(240, 70%, 50%), hsl(180, 70%, 50%), hsl(120, 70%, 50%), hsl(60, 70%, 50%), hsl(0, 70%, 50%))",
+              width: "80px",
+            }}
           />
           <span>10°C → 35°C</span>
         </div>
