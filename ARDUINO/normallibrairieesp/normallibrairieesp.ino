@@ -71,6 +71,9 @@ static char g_finalMessage[120];   // Réduit de 160
 static uint8_t g_hmac[32];
 static char g_hmacHex[17];         // Réduit de 65 (16 chars + null)
 
+// Mémorisation du mouvement détecté depuis le dernier envoi
+volatile bool g_motionDetected = false;
+
 struct SensorData {
     float temperature;
     float humidity;
@@ -120,18 +123,34 @@ void onLoraEvent(uint8_t eventType, uint8_t addr, uint8_t seq) {
 // ===============================
 void sensorTask(void *parameter) {
     SensorData data;
+    memset(&data, 0, sizeof(data));  // Initialiser à zéro
+    
+    // Forcer une première lecture immédiate
+    data.temperature = bme.readTemperature();
+    data.valid = !isnan(data.temperature);
+    data.motionDetected = false;
     
     while (true) {
         // Lire les capteurs BME280 (moins souvent, tous les 1000ms)
         static unsigned long lastBmeRead = 0;
         if (millis() - lastBmeRead >= 1000) {
             lastBmeRead = millis();
+            // MODE_FORCED: le capteur fait une mesure puis se remet en sleep
+            // Il faut attendre que la mesure soit prête
             data.temperature = bme.readTemperature();         
             data.valid = !isnan(data.temperature);
+            Serial.printf("[TEMP] %.1f°C | Valid: %d\n", data.temperature, data.valid);
+            
+            // Donner du temps pour la prochaine mesure
+            delay(10);
         }
         
         // Lire le capteur PIR très souvent (tous les 50ms)
-        data.motionDetected = digitalRead(HC_SR501_PIN);
+        // Si mouvement détecté, mémoriser l'état jusqu'au prochain envoi
+        if (digitalRead(HC_SR501_PIN)) {
+            g_motionDetected = true;
+        }
+        data.motionDetected = g_motionDetected;
         
         // Envoyer à la queue
         xQueueOverwrite(sensorQueue, &data);
@@ -186,7 +205,7 @@ void setup()
         Serial.println("[OK] BME280 initialisé");
         
         // Configuration BME280 pour basse consommation
-        bme.setSampling(Adafruit_BME280::MODE_FORCED,
+        bme.setSampling(Adafruit_BME280::MODE_NORMAL,
                         Adafruit_BME280::SAMPLING_X1,  // Température
                         Adafruit_BME280::SAMPLING_X1,  // Pression
                         Adafruit_BME280::SAMPLING_X1,  // Humidité
@@ -264,7 +283,7 @@ void loop()
             char tempStr[8];
             dtostrf(data.temperature, 4, 1, tempStr);
             
-            // Déterminer motion: true si PIR est HIGH, false sinon
+            // Déterminer motion: utiliser la variable mémorisée
             const char* motionStr = data.motionDetected ? "true" : "false";
             
             // Créer message pour HMAC
@@ -292,6 +311,10 @@ void loop()
             Serial.println("[TX] HEARTBEAT");
             net.send(GATEWAY_ADDRESS, (uint8_t *)g_finalMessage, strlen(g_finalMessage));
         }
+        
+        // Réinitialiser TOUJOURS la détection de mouvement après l'envoi
+        // (qu'il y ait eu des données ou un heartbeat)
+        g_motionDetected = false;
     }
 
     // Afficher statistiques toutes les 60 secondes
