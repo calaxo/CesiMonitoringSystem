@@ -39,10 +39,10 @@ int contrastPin = 25;
 // ===============================
 // BOUTONS GROVE
 // ===============================
-#define BTN_ENTER_PIN  32  // Bouton Entrer / Valider
-#define BTN_BACK_PIN   33  // Bouton Retour / Annuler
-#define BTN_LEFT_PIN   34  // Bouton Gauche / Précédent
-#define BTN_RIGHT_PIN  35  // Bouton Droite / Suivant
+#define BTN_ENTER_PIN 32 // Bouton Entrer / Valider
+#define BTN_BACK_PIN 33  // Bouton Retour / Annuler
+#define BTN_LEFT_PIN 34  // Bouton Gauche / Précédent
+#define BTN_RIGHT_PIN 35 // Bouton Droite / Suivant
 
 // Tâche boutons
 TaskHandle_t buttonTaskHandle = NULL;
@@ -54,13 +54,12 @@ volatile bool inSubMenu = false;
 volatile bool menuNeedsUpdate = true;
 
 // Menus
-const char* mainMenu[] = {
+const char *mainMenu[] = {
     "Etat WiFi",
-    "Etat MQTT", 
+    "Etat MQTT",
     "Stats LoRa",
     "Info Systeme",
-    "Redemarrer"
-};
+    "Redemarrer"};
 const int MENU_COUNT = 5;
 
 // Buffer MQTT thread-safe
@@ -249,67 +248,75 @@ void processMqttQueue()
 void updateLCD()
 {
     lcd.clear();
-    
-    if (!inSubMenu) {
+
+    if (!inSubMenu)
+    {
         // Menu principal
         lcd.setCursor(0, 0);
         lcd.print("> ");
         lcd.print(mainMenu[menuIndex]);
-        
+
         // Afficher l'option suivante
         lcd.setCursor(0, 1);
-        if (menuIndex + 1 < MENU_COUNT) {
+        if (menuIndex + 1 < MENU_COUNT)
+        {
             lcd.print("  ");
             lcd.print(mainMenu[menuIndex + 1]);
         }
-    } else {
+    }
+    else
+    {
         // Sous-menu - afficher les infos
-        switch (menuIndex) {
-            case 0: // Etat WiFi
-                lcd.setCursor(0, 0);
-                lcd.print(wifiConnected ? "WiFi: OK" : "WiFi: OFFLINE");
-                lcd.setCursor(0, 1);
-                if (wifiConnected) {
-                    lcd.print(WiFi.localIP().toString());
-                } else {
-                    lcd.print("Non connecte");
-                }
-                break;
-                
-            case 1: // Etat MQTT
-                lcd.setCursor(0, 0);
-                lcd.print(mqttConnected ? "MQTT: OK" : "MQTT: OFFLINE");
-                lcd.setCursor(0, 1);
-                lcd.print("Msg: ");
-                lcd.print(messagesRelayed);
-                break;
-                
-            case 2: // Stats LoRa
-                lcd.setCursor(0, 0);
-                lcd.print("LoRa RX: ");
-                lcd.print(net.getPacketsReceived());
-                lcd.setCursor(0, 1);
-                lcd.print("Relaye: ");
-                lcd.print(messagesRelayed);
-                break;
-                
-            case 3: // Info Systeme
-                lcd.setCursor(0, 0);
-                lcd.print("Heap: ");
-                lcd.print(ESP.getFreeHeap() / 1024);
-                lcd.print("KB");
-                lcd.setCursor(0, 1);
-                lcd.print("RSSI: ");
-                lcd.print(WiFi.RSSI());
-                lcd.print("dBm");
-                break;
-                
-            case 4: // Redemarrer
-                lcd.setCursor(0, 0);
-                lcd.print("Redemarrer ?");
-                lcd.setCursor(0, 1);
-                lcd.print("OK=Oui BACK=Non");
-                break;
+        switch (menuIndex)
+        {
+        case 0: // Etat WiFi
+            lcd.setCursor(0, 0);
+            lcd.print(wifiConnected ? "WiFi: OK" : "WiFi: OFFLINE");
+            lcd.setCursor(0, 1);
+            if (wifiConnected)
+            {
+                lcd.print(WiFi.localIP().toString());
+            }
+            else
+            {
+                lcd.print("Non connecte");
+            }
+            break;
+
+        case 1: // Etat MQTT
+            lcd.setCursor(0, 0);
+            lcd.print(mqttConnected ? "MQTT: OK" : "MQTT: OFFLINE");
+            lcd.setCursor(0, 1);
+            lcd.print("Msg: ");
+            lcd.print(messagesRelayed);
+            break;
+
+        case 2: // Stats LoRa
+            lcd.setCursor(0, 0);
+            lcd.print("LoRa RX: ");
+            lcd.print(net.getPacketsReceived());
+            lcd.setCursor(0, 1);
+            lcd.print("Relaye: ");
+            lcd.print(messagesRelayed);
+            break;
+
+        case 3: // Info Systeme
+            lcd.setCursor(0, 0);
+            lcd.print("Heap: ");
+            lcd.print(ESP.getFreeHeap() / 1024);
+            lcd.print("KB");
+            lcd.setCursor(0, 1);
+            lcd.print("RSSI: ");
+            lcd.print(WiFi.RSSI());
+            lcd.print("dBm");
+            break;
+
+        case 4: // Redemarrer
+            lcd.setCursor(0, 0);
+            lcd.print("Redemarrer ?");
+            lcd.setCursor(0, 1);
+            lcd.print("OK=Oui BACK=Non");
+            break;
         }
     }
 }
@@ -321,33 +328,37 @@ void buttonTask(void *parameter)
 {
     // États pour détection de front
     bool lastBtnEnter = false, lastBtnBack = false, lastBtnLeft = false, lastBtnRight = false;
-    
+
     // Debounce
     unsigned long lastDebounceEnter = 0, lastDebounceBack = 0, lastDebounceLeft = 0, lastDebounceRight = 0;
     const unsigned long DEBOUNCE_DELAY = 150; // 150ms debounce
-    
+
     Serial.println("[BTN] Tâche boutons démarrée");
-    
+
     while (true)
     {
         unsigned long now = millis();
-        
+
         bool btnEnter = digitalRead(BTN_ENTER_PIN);
         bool btnBack = digitalRead(BTN_BACK_PIN);
         bool btnLeft = digitalRead(BTN_LEFT_PIN);
         bool btnRight = digitalRead(BTN_RIGHT_PIN);
-        
+
         // Bouton ENTRER (GPIO32) - Valider / Entrer dans sous-menu
         if (btnEnter && !lastBtnEnter && (now - lastDebounceEnter) > DEBOUNCE_DELAY)
         {
             lastDebounceEnter = now;
             Serial.println("[BTN] ENTRER");
-            if (!inSubMenu) {
+            if (!inSubMenu)
+            {
                 inSubMenu = true;
                 menuNeedsUpdate = true;
-            } else {
+            }
+            else
+            {
                 // Action dans le sous-menu
-                if (menuIndex == 4) {
+                if (menuIndex == 4)
+                {
                     // Redemarrer
                     lcd.clear();
                     lcd.print("Redemarrage...");
@@ -357,43 +368,46 @@ void buttonTask(void *parameter)
             }
         }
         lastBtnEnter = btnEnter;
-        
+
         // Bouton RETOUR (GPIO33) - Annuler / Revenir
         if (btnBack && !lastBtnBack && (now - lastDebounceBack) > DEBOUNCE_DELAY)
         {
             lastDebounceBack = now;
             Serial.println("[BTN] RETOUR");
-            if (inSubMenu) {
+            if (inSubMenu)
+            {
                 inSubMenu = false;
                 menuNeedsUpdate = true;
             }
         }
         lastBtnBack = btnBack;
-        
+
         // Bouton GAUCHE (GPIO34) - Menu précédent
         if (btnLeft && !lastBtnLeft && (now - lastDebounceLeft) > DEBOUNCE_DELAY)
         {
             lastDebounceLeft = now;
             Serial.println("[BTN] GAUCHE");
-            if (!inSubMenu && menuIndex > 0) {
+            if (!inSubMenu && menuIndex > 0)
+            {
                 menuIndex--;
                 menuNeedsUpdate = true;
             }
         }
         lastBtnLeft = btnLeft;
-        
+
         // Bouton DROITE (GPIO35) - Menu suivant
         if (btnRight && !lastBtnRight && (now - lastDebounceRight) > DEBOUNCE_DELAY)
         {
             lastDebounceRight = now;
             Serial.println("[BTN] DROITE");
-            if (!inSubMenu && menuIndex < MENU_COUNT - 1) {
+            if (!inSubMenu && menuIndex < MENU_COUNT - 1)
+            {
                 menuIndex++;
                 menuNeedsUpdate = true;
             }
         }
         lastBtnRight = btnRight;
-        
+
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
@@ -409,7 +423,7 @@ void setup()
     lcd.print("Gateway LoRa");
     lcd.setCursor(0, 1);
     lcd.print("Demarrage...");
-    
+
     Serial.begin(115200);
     delay(2000); // Délai important pour stabilité ESP32
 
@@ -418,11 +432,11 @@ void setup()
     Serial.printf("Free Heap: %d bytes\n", ESP.getFreeHeap());
 
     // Initialisation boutons Grove
-    pinMode(BTN_ENTER_PIN, INPUT_PULLDOWN);  // GPIO32
-    pinMode(BTN_BACK_PIN, INPUT_PULLDOWN);   // GPIO33
-    pinMode(BTN_LEFT_PIN, INPUT);            // GPIO34 - input only
-    pinMode(BTN_RIGHT_PIN, INPUT);           // GPIO35 - input only
-    
+    pinMode(BTN_ENTER_PIN, INPUT_PULLDOWN); // GPIO32
+    pinMode(BTN_BACK_PIN, INPUT_PULLDOWN);  // GPIO33
+    pinMode(BTN_LEFT_PIN, INPUT);           // GPIO34 - input only
+    pinMode(BTN_RIGHT_PIN, INPUT);          // GPIO35 - input only
+
     Serial.println("[OK] Boutons initialises (GPIO 32,33,34,35)");
     Serial.printf("[BTN] Etat: ENTER=%d BACK=%d LEFT=%d RIGHT=%d\n",
                   digitalRead(BTN_ENTER_PIN), digitalRead(BTN_BACK_PIN),
@@ -434,9 +448,9 @@ void setup()
         "Buttons",
         4096,
         NULL,
-        2,  // Priorité haute
+        2, // Priorité haute
         &buttonTaskHandle,
-        0   // Core 0
+        0 // Core 0
     );
 
     // Créer la queue MQTT
@@ -468,7 +482,7 @@ void setup()
 
     Serial.println("[INIT] Gateway prête!");
     Serial.printf("[INIT] LoRa sur GPIO%d(RX)/GPIO%d(TX)\n", LORA_RX_PIN, LORA_TX_PIN);
-    
+
     // Afficher le menu initial
     menuNeedsUpdate = true;
 }
