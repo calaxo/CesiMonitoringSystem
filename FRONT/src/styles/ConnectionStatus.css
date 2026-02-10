@@ -15,6 +15,11 @@
   border-color: #27ae60;
 }
 
+.connection-status.partial {
+  background-color: #fff8e6;
+  border-color: #f39c12;
+}
+
 .connection-status.disconnected {
   background-color: #fdeaea;
   border-color: #e74c3c;
@@ -29,6 +34,10 @@
 
 .connection-status.connected .status-indicator {
   color: #27ae60;
+}
+
+.connection-status.partial .status-indicator {
+  color: #f39c12;
 }
 
 .connection-status.disconnected .status-indicator {

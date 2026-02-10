@@ -1,4 +1,7 @@
 #include <SoftwareSerial.h>
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
 #include "LoraTwo.h"
 
 // ===============================
@@ -14,7 +17,7 @@
 //
 // EXEMPLES:
 //   LoraTwo net(0x01);  // Node capteur température
-//   LoraTwo net(0x02);  // Node capteur humidité  
+//   LoraTwo net(0x02);  // Node capteur humidité
 //   LoraTwo net(0x03);  // Node bouton
 //   LoraTwo net(0x10);  // Node #16
 //
@@ -24,16 +27,27 @@
 //
 // ===============================
 
-LoraTwo net(0x02);  // Node à l'adresse 0x02
+LoraTwo net(0x02);   // Node à l'adresse 0x02
+Adafruit_BME280 bme; // Capteur BME280 en I2C
 
 unsigned long lastSend = 0;
-const unsigned long SEND_INTERVAL = 5000;  // Envoyer toutes les 5 secondes
+const unsigned long SEND_INTERVAL = 5000; // Envoyer toutes les 30 secondes
 
 void setup()
 {
     Serial.begin(9600);
     delay(500);
     Serial.println("=== NODE LoRa 0x02 ===");
+
+    // Initialisation du BME280
+    if (!bme.begin(0x76))
+    { // Adresse I2C du BME280 (0x76 ou 0x77)
+        Serial.println("BME280 non trouvé ! Vérifiez le câblage.");
+        while (1);
+    }
+    net.setEncryptionKey(0xCAFEBABE);
+    Serial.println("BME280 initialisé");
+    // net.setEncryptionEnabled(false);
 
     // Pour Arduino UNO : utiliser SoftwareSerial
     // SoftwareSerial loraSerial(2, 3); // RX=2, TX=3
@@ -42,6 +56,7 @@ void setup()
 
     // Pour Arduino Mega : utiliser Serial1 (pins 18/19)
     Serial1.begin(9600);
+    
     net.begin(&Serial1);
 }
 
@@ -53,14 +68,26 @@ void loop()
     if (now - lastSend >= SEND_INTERVAL)
     {
         lastSend = now;
-        
-        // Tu peux envoyer n'importe quel texte (max 48 caractères)
-        char message[] = "Bonjour depuis le node 2!";
-        net.send(0x00, (uint8_t*)message, strlen(message));
+
+        // Lire la température depuis le BME280
+        float temperature = bme.readTemperature();
+
+        // Convertir le float en string (Arduino ne supporte pas %f dans snprintf)
+        char tempStr[10];
+        dtostrf(temperature, 4, 1, tempStr); // 4 = largeur min, 1 = décimales
+
+        // Formater le message JSON
+        char message[50];
+        snprintf(message, sizeof(message), "{\"temperature\":%s}", tempStr);
+
+        Serial.print("Envoi: ");
+        Serial.println(message);
+
+        net.send(0x00, (uint8_t *)message, strlen(message));
     }
 
     // update() gère les ACK et les retries automatiquement
     net.update();
-    
+
     delay(50);
 }

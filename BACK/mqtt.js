@@ -1,7 +1,45 @@
 const mqtt = require("mqtt");
+const crypto = require("crypto");
 const { insertSensorData } = require("./db");
 
 let client = null;
+
+// Clé HMAC (DOIT être la même que sur les capteurs!)
+const HMAC_KEY = Buffer.from([0xCA, 0xFE, 0xBA, 0xBE, 0xDE, 0xAD, 0xBE, 0xEF, 
+                              0xCA, 0xFE, 0xBA, 0xBE, 0xDE, 0xAD, 0xBE, 0xEF]);
+
+/**
+ * Vérifie le HMAC d'un message
+ * @param {object} payload - Payload avec t, m et hmac
+ * @returns {boolean} - True si HMAC valide
+ */
+function verifyHmac(payload) {
+  if (!payload.hmac) {
+    console.warn("⚠️ Message sans HMAC");
+    return false;
+  }
+
+  // Reconstruire le message original (sans hmac)
+  // Note: dtostrf sur ESP32 formate avec 1 décimale, on doit reproduire exactement
+  const tempStr = Number(payload.t).toFixed(1);
+  const motionStr = payload.m ? "true" : "false";
+  const messageForHmac = `{"t":${tempStr},"m":${motionStr}}`;
+
+  // Calculer le HMAC SHA256
+  const hmac = crypto.createHmac('sha256', HMAC_KEY);
+  hmac.update(messageForHmac);
+  const computedHmac = hmac.digest('hex').substring(0, 16); // 8 bytes = 16 hex chars
+
+  if (computedHmac === payload.hmac) {
+    return true;
+  } else {
+    console.warn(`⚠️ HMAC invalide!`);
+    console.warn(`   Message reconstruit: ${messageForHmac}`);
+    console.warn(`   HMAC calculé: ${computedHmac}`);
+    console.warn(`   HMAC reçu: ${payload.hmac}`);
+    return false;
+  }
+}
 
 /**
  * Initialise la connexion MQTT et s'abonne aux topics
@@ -68,9 +106,27 @@ async function initMQTT() {
           return;
         }
 
+        // Vérifier le HMAC si présent (payload du capteur)
+        if (payload.hmac !== undefined) {
+          if (!verifyHmac(payload)) {
+            console.warn(`⚠️ Message du capteur ${payload.sensor_id} rejeté (HMAC invalide)`);
+            return;
+          }
+          console.log(`✅ HMAC valide pour capteur ${payload.sensor_id}`);
+        }
+
+        // Mapper les champs courts vers les champs longs
+        const normalizedPayload = {
+          sensor_id: payload.sensor_id,
+          temperature: payload.t !== undefined ? payload.t : payload.temperature,
+          presence: payload.m !== undefined ? payload.m : payload.presence,
+          rssi: payload.rssi,
+          snr: payload.snr
+        };
+
         // Insérer dans la base de données
-        await insertSensorData(payload);
-        console.log(`💾 Données sauvegardées pour capteur ${payload.sensor_id}`);
+        await insertSensorData(normalizedPayload);
+        console.log(`💾 Données sauvegardées pour capteur ${payload.sensor_id} (T:${normalizedPayload.temperature}°C, M:${normalizedPayload.presence ? 'OUI' : 'NON'})`);
 
       } catch (err) {
         console.error("❌ Erreur traitement message MQTT:", err.message);

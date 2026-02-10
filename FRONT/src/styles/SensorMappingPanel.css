@@ -1,0 +1,146 @@
+.sensor-mapping-panel {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sensor-mapping-panel .panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.sensor-mapping-panel h3 {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.sensor-mapping-panel .refresh-btn {
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sensor-mapping-panel .refresh-btn:hover {
+  background: #e0e0e0;
+}
+
+.sensor-mapping-panel .loading {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
+
+.sensor-mapping-panel .error-message {
+  background: #fdeaea;
+  color: #e74c3c;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 13px;
+}
+
+.sensor-mapping-panel .no-sensors {
+  color: #999;
+  text-align: center;
+  padding: 30px;
+  font-style: italic;
+}
+
+.sensor-mapping-panel .sensors-list {
+  overflow-x: auto;
+}
+
+.sensor-mapping-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.sensor-mapping-panel th {
+  background: #f5f5f5;
+  padding: 10px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #ddd;
+  white-space: nowrap;
+}
+
+.sensor-mapping-panel td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.sensor-mapping-panel tr:hover {
+  background: #f9f9f9;
+}
+
+.sensor-mapping-panel .sensor-id {
+  font-family: monospace;
+  color: #0088fe;
+  font-size: 12px;
+}
+
+.sensor-mapping-panel .editable-name {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.sensor-mapping-panel .editable-name:hover {
+  background: #f0f0f0;
+}
+
+.sensor-mapping-panel .editable-name em {
+  color: #999;
+}
+
+.sensor-mapping-panel td input[type="text"] {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #0088fe;
+  border-radius: 4px;
+  font-size: 13px;
+  outline: none;
+}
+
+.sensor-mapping-panel td select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  background: white;
+  cursor: pointer;
+}
+
+.sensor-mapping-panel td select:focus {
+  border-color: #0088fe;
+  outline: none;
+}
+
+.sensor-mapping-panel .status-cell {
+  text-align: center;
+  width: 40px;
+}
+
+.sensor-mapping-panel .help-text {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.sensor-mapping-panel .help-text p {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}

@@ -2,16 +2,16 @@
  * ===============================
  * LoraTwo - Implémentation ESP32 avec FreeRTOS
  * ===============================
- *
+ * 
  * Architecture multithread:
  *   - Core 0: Tâche RX (réception LoRa haute priorité)
  *   - Core 1: Tâche TX (envoi, retries, traitement)
- *
+ * 
  * Communication inter-tâches via queues FreeRTOS
  * Protection des ressources partagées via mutex
  */
 
-#include "LoraTwo.h"
+#include "LoraTwoesp.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -36,7 +36,7 @@ LoraTwo::LoraTwo(uint8_t myAddr, bool isGateway)
     _receiveCallback = NULL;
     _receiveCallbackEx = NULL;
     _eventCallback = NULL;
-
+    
     // Stockage données
     _dataAvailable = false;
     _lastSender = 0;
@@ -84,10 +84,10 @@ LoraTwo::~LoraTwo()
 void LoraTwo::stop()
 {
     _running = false;
-
+    
     // Attendre que les tâches se terminent
     vTaskDelay(pdMS_TO_TICKS(100));
-
+    
     // Supprimer les tâches
     if (_rxTaskHandle != NULL)
     {
@@ -99,7 +99,7 @@ void LoraTwo::stop()
         vTaskDelete(_txTaskHandle);
         _txTaskHandle = NULL;
     }
-
+    
     // Supprimer les queues
     if (_txQueue != NULL)
     {
@@ -111,7 +111,7 @@ void LoraTwo::stop()
         vQueueDelete(_rxQueue);
         _rxQueue = NULL;
     }
-
+    
     // Supprimer les mutex
     if (_serialMutex != NULL)
     {
@@ -136,19 +136,19 @@ void LoraTwo::stop()
 void LoraTwo::begin(Stream *serial)
 {
     _serial = serial;
-
+    
     // Créer les mutex
     _serialMutex = xSemaphoreCreateMutex();
     _dataMutex = xSemaphoreCreateMutex();
     _pendingMutex = xSemaphoreCreateMutex();
-
+    
     // Créer les queues
     _txQueue = xQueueCreate(LORATWO_TX_QUEUE_SIZE, sizeof(TxMessage));
     _rxQueue = xQueueCreate(LORATWO_RX_QUEUE_SIZE, sizeof(LoraTwoPacket));
-
+    
     // Configuration du module LoRa
     vTaskDelay(pdMS_TO_TICKS(200));
-
+    
     if (xSemaphoreTake(_serialMutex, portMAX_DELAY) == pdTRUE)
     {
         _serial->print("AT+MODE=TEST\r\n");
@@ -156,20 +156,20 @@ void LoraTwo::begin(Stream *serial)
         _serial->print("AT+TEST=RXLRPKT\r\n");
         xSemaphoreGive(_serialMutex);
     }
-
+    
     _running = true;
-
+    
     // Créer la tâche de réception sur Core 0 (haute priorité)
     xTaskCreatePinnedToCore(
-        rxTask,                   // Fonction
-        "LoRa_RX",                // Nom
-        LORATWO_TASK_STACK_SIZE,  // Stack
-        this,                     // Paramètre (pointeur vers l'instance)
-        LORATWO_TASK_PRIORITY_RX, // Priorité
-        &_rxTaskHandle,           // Handle
-        LORATWO_CORE_RX           // Core 0
+        rxTask,                     // Fonction
+        "LoRa_RX",                  // Nom
+        LORATWO_TASK_STACK_SIZE,    // Stack
+        this,                       // Paramètre (pointeur vers l'instance)
+        LORATWO_TASK_PRIORITY_RX,   // Priorité
+        &_rxTaskHandle,             // Handle
+        LORATWO_CORE_RX             // Core 0
     );
-
+    
     // Créer la tâche d'envoi/traitement sur Core 1
     xTaskCreatePinnedToCore(
         txTask,
@@ -178,8 +178,9 @@ void LoraTwo::begin(Stream *serial)
         this,
         LORATWO_TASK_PRIORITY_TX,
         &_txTaskHandle,
-        LORATWO_CORE_TX);
-
+        LORATWO_CORE_TX
+    );
+    
     if (_isGateway)
     {
         debugLog("[INIT] Gateway ESP32 prête (dual-core)");
@@ -208,7 +209,7 @@ void LoraTwo::debugLog(const char *format, ...)
 {
     if (!_debugEnabled)
         return;
-
+        
     char buffer[128];
     va_list args;
     va_start(args, format);
@@ -349,7 +350,7 @@ int LoraTwo::addPending(uint8_t dst, LoraTwoPacketType type, uint8_t *data, uint
 {
     if (xSemaphoreTake(_pendingMutex, pdMS_TO_TICKS(100)) != pdTRUE)
         return -1;
-
+        
     int result = -1;
     for (int i = 0; i < LORATWO_MAX_PENDING; i++)
     {
@@ -373,15 +374,15 @@ int LoraTwo::addPending(uint8_t dst, LoraTwoPacketType type, uint8_t *data, uint
             msg.len = len;
             memcpy(msg.payload, data, len);
             msg.needsAck = !_isGateway && (dst != LORATWO_BROADCAST);
-
+            
             xQueueSend(_txQueue, &msg, pdMS_TO_TICKS(100));
-
+            
             debugLog("[TX] Envoi vers 0x%02X seq=%d", dst, p.seq);
             result = i;
             break;
         }
     }
-
+    
     xSemaphoreGive(_pendingMutex);
     return result;
 }
@@ -445,14 +446,14 @@ bool LoraTwo::receive(LoraTwoPacket &pkt)
 {
     if (xSemaphoreTake(_serialMutex, pdMS_TO_TICKS(10)) != pdTRUE)
         return false;
-
+        
     while (_serial->available() && _recvIdx < (int)(sizeof(_recvBuf) - 1))
     {
         char c = _serial->read();
         _recvBuf[_recvIdx++] = c;
     }
     _recvBuf[_recvIdx] = 0;
-
+    
     xSemaphoreGive(_serialMutex);
 
     // Extraire RSSI et SNR
@@ -574,7 +575,7 @@ void LoraTwo::processPacket(LoraTwoPacket &pkt)
     if (pkt.type == L2_PKT_DISCOVER && _isGateway)
     {
         sendPacket(pkt.src, L2_PKT_OFFER, _seq++, &_myAddr, 1);
-
+        
         // Enregistrer le node
         for (int i = 0; i < LORATWO_MAX_NODES; i++)
         {
@@ -584,7 +585,7 @@ void LoraTwo::processPacket(LoraTwoPacket &pkt)
                 _nodes[i].active = true;
                 _nodes[i].lastSeen = millis();
                 _nodes[i].lastRssi = pkt.rssi;
-
+                
                 if (_eventCallback)
                     _eventCallback(LORA_EVENT_NODE_DISCOVERED, pkt.src, pkt.seq);
                 break;
@@ -600,7 +601,7 @@ void LoraTwo::rxTask(void *parameter)
 {
     LoraTwo *self = (LoraTwo *)parameter;
     LoraTwoPacket pkt;
-
+    
     while (self->_running)
     {
         if (self->receive(pkt))
@@ -614,12 +615,12 @@ void LoraTwo::rxTask(void *parameter)
                     {
                         for (int i = 0; i < LORATWO_MAX_PENDING; i++)
                         {
-                            if (self->_pendingPackets[i].active &&
+                            if (self->_pendingPackets[i].active && 
                                 self->_pendingPackets[i].seq == pkt.seq)
                             {
                                 self->_pendingPackets[i].active = false;
                                 self->debugLog("[OK] ACK recu de 0x%02X seq=%d", pkt.src, pkt.seq);
-
+                                
                                 if (self->_eventCallback)
                                     self->_eventCallback(LORA_EVENT_ACK_RECEIVED, pkt.src, pkt.seq);
                             }
@@ -634,10 +635,10 @@ void LoraTwo::rxTask(void *parameter)
                 }
             }
         }
-
+        
         vTaskDelay(pdMS_TO_TICKS(10)); // Yield pour éviter watchdog
     }
-
+    
     vTaskDelete(NULL);
 }
 
@@ -649,25 +650,25 @@ void LoraTwo::txTask(void *parameter)
     LoraTwo *self = (LoraTwo *)parameter;
     TxMessage txMsg;
     LoraTwoPacket rxPkt;
-
+    
     while (self->_running)
     {
         // Traiter les messages à envoyer
         if (xQueueReceive(self->_txQueue, &txMsg, pdMS_TO_TICKS(10)) == pdTRUE)
         {
-            self->sendPacket(txMsg.dst, (LoraTwoPacketType)txMsg.type, txMsg.seq,
-                             txMsg.payload, txMsg.len);
+            self->sendPacket(txMsg.dst, (LoraTwoPacketType)txMsg.type, txMsg.seq, 
+                           txMsg.payload, txMsg.len);
         }
-
+        
         // Traiter les paquets reçus
         if (xQueueReceive(self->_rxQueue, &rxPkt, pdMS_TO_TICKS(10)) == pdTRUE)
         {
             self->processPacket(rxPkt);
         }
-
+        
         // Vérifier les timeouts et retries
         unsigned long now = millis();
-
+        
         if (xSemaphoreTake(self->_pendingMutex, pdMS_TO_TICKS(50)) == pdTRUE)
         {
             for (int i = 0; i < LORATWO_MAX_PENDING; i++)
@@ -706,7 +707,7 @@ void LoraTwo::txTask(void *parameter)
                         self->debugLog("[FAIL] seq=%d echec envoi - pas de reponse", p.seq);
                         p.active = false;
                         self->_packetsLost++;
-
+                        
                         if (self->_eventCallback)
                             self->_eventCallback(LORA_EVENT_SEND_FAILED, p.dst, p.seq);
                     }
@@ -714,10 +715,10 @@ void LoraTwo::txTask(void *parameter)
             }
             xSemaphoreGive(self->_pendingMutex);
         }
-
+        
         vTaskDelay(pdMS_TO_TICKS(50));
     }
-
+    
     vTaskDelete(NULL);
 }
 

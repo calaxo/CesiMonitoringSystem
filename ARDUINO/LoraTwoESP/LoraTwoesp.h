@@ -72,13 +72,13 @@
 // ===============================
 // CONFIGURATION ESP32
 // ===============================
-#define LORATWO_TASK_STACK_SIZE 4096 // Taille stack pour les tâches FreeRTOS
-#define LORATWO_RX_QUEUE_SIZE 16     // Taille de la queue de réception
-#define LORATWO_TX_QUEUE_SIZE 16     // Taille de la queue d'envoi
-#define LORATWO_CORE_RX 0            // Core pour la réception LoRa
-#define LORATWO_CORE_TX 1            // Core pour l'envoi et le traitement
-#define LORATWO_TASK_PRIORITY_RX 2   // Priorité tâche réception (haute)
-#define LORATWO_TASK_PRIORITY_TX 1   // Priorité tâche envoi
+#define LORATWO_TASK_STACK_SIZE 4096   // Taille stack pour les tâches FreeRTOS
+#define LORATWO_RX_QUEUE_SIZE 16       // Taille de la queue de réception
+#define LORATWO_TX_QUEUE_SIZE 16       // Taille de la queue d'envoi
+#define LORATWO_CORE_RX 0              // Core pour la réception LoRa
+#define LORATWO_CORE_TX 1              // Core pour l'envoi et le traitement
+#define LORATWO_TASK_PRIORITY_RX 2     // Priorité tâche réception (haute)
+#define LORATWO_TASK_PRIORITY_TX 1     // Priorité tâche envoi
 
 // ===============================
 // CALLBACK POUR RÉCEPTION
@@ -97,10 +97,10 @@ typedef void (*LoraEventCallback)(uint8_t eventType, uint8_t addr, uint8_t seq);
 // Types d'événements
 enum LoraEvent : uint8_t
 {
-    LORA_EVENT_ACK_RECEIVED = 0x01,    // ACK reçu avec succès
-    LORA_EVENT_SEND_FAILED = 0x02,     // Échec envoi après max retries
+    LORA_EVENT_ACK_RECEIVED = 0x01, // ACK reçu avec succès
+    LORA_EVENT_SEND_FAILED = 0x02, // Échec envoi après max retries
     LORA_EVENT_NODE_DISCOVERED = 0x03, // Nouveau node découvert
-    LORA_EVENT_SEND_OK = 0x04          // Message envoyé (pour gateway)
+    LORA_EVENT_SEND_OK = 0x04      // Message envoyé (pour gateway)
 };
 
 // ===============================
@@ -137,10 +137,10 @@ struct LoraTwoPacket
 
 struct LoraTwoNode
 {
-    uint8_t addr;           // Adresse du node
-    bool active;            // Node actif?
+    uint8_t addr;          // Adresse du node
+    bool active;           // Node actif?
     unsigned long lastSeen; // Dernier contact
-    int lastRssi;           // Dernier RSSI
+    int lastRssi;          // Dernier RSSI
 };
 
 // ===============================
@@ -351,7 +351,7 @@ public:
     // ===============================
     // MÉTHODES LEGACY (compatibilité)
     // ===============================
-
+    
     /*
      * LEGACY: update() n'est plus nécessaire avec ESP32!
      * Conservé pour compatibilité, ne fait rien.

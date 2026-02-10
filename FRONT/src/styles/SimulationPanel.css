@@ -1,41 +1,42 @@
 .simulation-panel {
   background: white;
-  border-radius: 8px;
-  padding: 16px;
-  margin: 16px 0;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 0;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   color: Black;
+  max-width: 600px;
 }
 
 .simulation-panel h3 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
+  margin: 0 0 20px 0;
+  font-size: 20px;
   font-weight: 600;
+  color: #1f2937;
 }
 
 .simulation-controls {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
 .simulation-btn {
   flex: 1;
-  min-width: 120px;
-  padding: 10px 16px;
+  min-width: 150px;
+  padding: 14px 24px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background-color: #4ade80;
-  color: White ;
+  color: White;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .simulation-btn:hover {
-  
   transform: translateY(-2px);
 }
 
