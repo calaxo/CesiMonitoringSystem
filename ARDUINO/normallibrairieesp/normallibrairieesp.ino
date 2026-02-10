@@ -40,7 +40,6 @@ const size_t HMAC_KEY_LEN = sizeof(HMAC_KEY);
 
 // Pin HC-SR501 (capteur mouvement PIR)
 #define HC_SR501_PIN 13
-#define PIR_INIT_TIME_MS 30000  // Temps d'initialisation du PIR (30 secondes)
 
 // Pins LED Chainable (Grove v2.0)
 #define LED_PIN 2   // LED intégrée ESP32
@@ -64,13 +63,7 @@ Adafruit_BME280 bme;
 
 // Variables pour la tâche de lecture capteurs
 TaskHandle_t sensorTaskHandle = NULL;
-TaskHandle_t presenceTaskHandle = NULL;
 QueueHandle_t sensorQueue;
-
-// Variables de présence (partagées avec synchronisation)
-volatile uint16_t presenceCount = 0;      // Compteur de présences détectées
-volatile bool currentPresence = false;     // État actuel (pour affichage temps réel)
-volatile bool lastPresenceState = false;   // Dernier état pour éviter les logs répétés
 
 // Buffers globaux pour éviter débordement stack
 static char g_messageForHmac[80];
@@ -123,81 +116,31 @@ void onLoraEvent(uint8_t eventType, uint8_t addr, uint8_t seq) {
 }
 
 // ===============================
-// TÂCHE CALCUL PRÉSENCE (Core 0)
-// ===============================
-void presenceTask(void *parameter) {
-    bool lastMotionState = false;
-    unsigned long lastMotionDetectedTime = millis();  // Initialiser au temps actuel
-    unsigned long lastMotionEventTime = 0;  // Débounce : ignorer les événements rapides
-    const unsigned long MOTION_HOLD_MS = 2000;  // Garder LED ON pendant 2 sec
-    const unsigned long MOTION_DEBOUNCE_MS = 500;  // Ignorer les événements < 500ms après le dernier
-    
-    // Démarrer en OFF
-    digitalWrite(LED_PIN, LOW);
-    Serial.println("[INIT] LED démarrée en OFF");
-    
-    while (true) {
-        bool currentMotionState = digitalRead(HC_SR501_PIN);
-        unsigned long now = millis();
-        
-        // Détecter transition LOW -> HIGH (mouvement commence)
-        if (currentMotionState && !lastMotionState) {
-            // Débounce : accepter uniquement si assez de temps depuis le dernier événement
-            if (now - lastMotionEventTime > MOTION_DEBOUNCE_MS) {
-                lastMotionEventTime = now;
-                lastMotionDetectedTime = now;
-                presenceCount++;
-                Serial.printf("[DETECTED] Mouvement! (event_time=%lu)\n", now);
-            }
-        }
-        lastMotionState = currentMotionState;
-        
-        // Contrôler la LED selon le temps écoulé
-        if (now - lastMotionDetectedTime < MOTION_HOLD_MS) {
-            // LED ON si mouvement récent (dans les 2 dernières secondes)
-            digitalWrite(LED_PIN, HIGH);
-        } else {
-            // LED OFF sinon
-            digitalWrite(LED_PIN, LOW);
-        }
-        
-        // Afficher l'état toutes les 3 secondes
-        static unsigned long lastPrintTime = 0;
-        if (now - lastPrintTime > 3000) {
-            lastPrintTime = now;
-            bool ledState = (now - lastMotionDetectedTime < MOTION_HOLD_MS);
-            Serial.printf("[STATUS] PIR=%d | LED=%s | Count=%d\n", 
-                         currentMotionState ? 1 : 0, ledState ? "ON" : "OFF", presenceCount);
-        }
-        
-        vTaskDelay(pdMS_TO_TICKS(200));
-    }
-}
-
-// ===============================
 // TÂCHE LECTURE CAPTEURS (Core 1)
 // ===============================
 void sensorTask(void *parameter) {
     SensorData data;
     
     while (true) {
-        // Lire les capteurs BME280
-        data.temperature = bme.readTemperature();
-        data.humidity = bme.readHumidity();
-        data.pressure = bme.readPressure() / 100.0F; // hPa
-        data.valid = !isnan(data.temperature);
+        // Lire les capteurs BME280 (moins souvent, tous les 1000ms)
+        static unsigned long lastBmeRead = 0;
+        if (millis() - lastBmeRead >= 1000) {
+            lastBmeRead = millis();
+            data.temperature = bme.readTemperature();         
+            data.valid = !isnan(data.temperature);
+        }
         
-        // La présence sera calculée par la tâche presenceTask
-        data.motionDetected = false;  // Sera utilisé pour le message
+        // Lire le capteur PIR très souvent (tous les 50ms)
+        data.motionDetected = digitalRead(HC_SR501_PIN);
         
         // Envoyer à la queue
         xQueueOverwrite(sensorQueue, &data);
         
-        // Attendre avant prochaine lecture
-        vTaskDelay(pdMS_TO_TICKS(1000));  // Lecture toutes les secondes
+        // Délai court pour lecture fréquente du PIR
+        vTaskDelay(pdMS_TO_TICKS(50));  // Lecture PIR toutes les 50ms
+        
     }
 }
-
 // ===============================
 // SETUP
 // ===============================
@@ -219,17 +162,15 @@ void setup()
     pinMode(HC_SR501_PIN, INPUT);
     Serial.println("[OK] HC-SR501 initialisé sur GPIO" + String(HC_SR501_PIN));
     
+    // Attendre que le capteur PIR se stabilise
+    Serial.println("[INIT] Stabilisation du PIR en cours... (5 secondes)");
+    delay(5000);  // Laisser le temps au capteur de se stabiliser
+    Serial.println("[OK] PIR stabilisé");
+    
     // Initialisation LED intégrée
     pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, LOW);  // LED OFF (active HIGH)
-    Serial.println("[OK] LED intégrée initialisée sur GPIO" + String(LED_PIN));
-    
-    // Calibration du capteur PIR (30 secondes)
-    Serial.print("[PIR] Calibration...");
-    for (int i = 30; i > 0; i--) {
-        delay(1000);
-    }
-    Serial.println(" OK");
+    digitalWrite(LED_PIN, LOW);  // LED OFF au démarrage
+    Serial.println("[OK] LED initialisée sur GPIO" + String(LED_PIN));
     
     // Initialisation BME280
     if (!bme.begin(0x76)) {  // ou 0x77 selon le module
@@ -266,17 +207,6 @@ void setup()
         1  // Core 1
     );
     
-    // Créer tâche de calcul présence sur Core 0
-    xTaskCreatePinnedToCore(
-        presenceTask,
-        "Presence",
-        2048,
-        NULL,
-        1,
-        &presenceTaskHandle,
-        0  // Core 0
-    );
-
     // Initialiser LoRa
     Serial.printf("[LORA] Init sur GPIO%d(RX)/GPIO%d(TX)\n", LORA_RX_PIN, LORA_TX_PIN);
     Serial2.begin(9600, SERIAL_8N1, LORA_RX_PIN, LORA_TX_PIN);
@@ -313,11 +243,13 @@ void setup()
 // ===============================
 unsigned long lastSend = 0;
 uint32_t messageCount = 0;
-uint16_t motionCounter = 0;  // Compteur pour réinitialisation après envoi
 
 void loop()
 {
     unsigned long now = millis();
+    
+    // Contrôler la LED selon le PIR en temps réel
+    digitalWrite(LED_PIN, digitalRead(HC_SR501_PIN) ? HIGH : LOW);
 
     // Envoi périodique
     if (now - lastSend >= SEND_INTERVAL_MS)
@@ -328,13 +260,12 @@ void loop()
         // Récupérer données capteurs depuis la queue
         SensorData data;
         if (xQueuePeek(sensorQueue, &data, 0) == pdTRUE && data.valid) {
-            // Convertir température seulement
+            // Convertir température
             char tempStr[8];
             dtostrf(data.temperature, 4, 1, tempStr);
             
-            // Déterminer la présence : true si au moins 1 mouvement détecté depuis dernière trame
-            bool presenceDetected = (presenceCount >= 1);
-            const char* motionStr = presenceDetected ? "true" : "false";
+            // Déterminer motion: true si PIR est HIGH, false sinon
+            const char* motionStr = data.motionDetected ? "true" : "false";
             
             // Créer message pour HMAC
             snprintf(g_messageForHmac, sizeof(g_messageForHmac), 
@@ -355,9 +286,6 @@ void loop()
             if (!net.send(GATEWAY_ADDRESS, (uint8_t *)g_finalMessage, strlen(g_finalMessage))) {
                 Serial.println("[ERREUR] Queue pleine!");
             }
-            
-            // Réinitialiser le compteur après envoi
-            presenceCount = 0;
         } else {
             // Pas de données capteur, envoyer heartbeat simple
             snprintf(g_finalMessage, sizeof(g_finalMessage), "{\"status\":\"alive\"}");
