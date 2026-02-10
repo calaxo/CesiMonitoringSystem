@@ -24,11 +24,25 @@ export const BuildingFloorPlan = ({
   };
 
   const getTemperatureColor = (temp) => {
-    if (temp < 15) return "#4a90e2"; // Blue - Cold
-    if (temp < 18) return "#7ed321"; // Green - Cool
-    if (temp < 22) return "#f5a623"; // Orange - Normal
-    if (temp < 25) return "#e74c3c"; // Red - Warm
-    return "#c0392b"; // Dark Red - Very Hot
+    // Si pas de température, retourner gris
+    if (temp === null || temp === undefined) return "#9e9e9e"; // Gris
+
+    // Dégradé du bleu (froid) au rouge (chaud)
+    // Plage de température: 10°C (bleu) à 35°C (rouge)
+    const minTemp = 10;
+    const maxTemp = 35;
+
+    // Normaliser la température entre 0 et 1
+    const normalizedTemp = Math.max(
+      0,
+      Math.min(1, (temp - minTemp) / (maxTemp - minTemp)),
+    );
+
+    // Interpolation entre bleu et rouge via les teintes HSL
+    // Bleu = 240°, Rouge = 0° (on va de 240 vers 0)
+    const hue = 240 * (1 - normalizedTemp);
+
+    return `hsl(${hue}, 70%, 50%)`;
   };
 
   // Calculate canvas dimensions - ENLARGED
@@ -173,9 +187,14 @@ export const BuildingFloorPlan = ({
           {rooms.map((room) => {
             const roomData = getRoomStatus(room.id);
             const isOccupied = roomData?.occupied || false;
-            const rawTemp = roomData?.temperature ?? room.temperature ?? 20;
+            // Si pas de données capteur, temp sera null (affichage gris)
+            const rawTemp = roomData?.temperature;
             const temp =
-              typeof rawTemp === "number" ? rawTemp : parseFloat(rawTemp) || 20;
+              rawTemp !== undefined && rawTemp !== null
+                ? typeof rawTemp === "number"
+                  ? rawTemp
+                  : parseFloat(rawTemp)
+                : null;
             const tempColor = getTemperatureColor(temp);
 
             const x = padding + room.x * roomScale;
@@ -242,19 +261,17 @@ export const BuildingFloorPlan = ({
                 </text>
 
                 {/* Temperature text */}
-                {roomData && (
-                  <text
-                    x={x + width / 2}
-                    y={y + height / 2 + 15}
-                    textAnchor="middle"
-                    className="room-temp"
-                    fontSize="15"
-                    fill={tempColor}
-                    fontWeight="bold"
-                  >
-                    {temp.toFixed(1)}°C
-                  </text>
-                )}
+                <text
+                  x={x + width / 2}
+                  y={y + height / 2 + 15}
+                  textAnchor="middle"
+                  className="room-temp"
+                  fontSize="15"
+                  fill={tempColor}
+                  fontWeight="bold"
+                >
+                  {temp !== null ? `${temp.toFixed(1)}°C` : "N/A"}
+                </text>
 
                 {/* Status text */}
                 <text
