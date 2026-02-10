@@ -31,8 +31,9 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
   const [historyData, setHistoryData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [sensorsList, setSensorsList] = useState([]);
 
-  const { floorPlans, selectedFloor, globalStats } = useBuildingStore();
+  const { floorPlans, selectedFloor, globalStats, sensorRegistry } = useBuildingStore();
 
   // Sauvegarder les sélections dans localStorage
   useEffect(() => {
@@ -51,6 +52,32 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
   const currentFloor = floorPlans.find((f) => f.id === selectedFloor);
   const rooms = currentFloor?.rooms || [];
 
+  // Charger la liste des capteurs au montage
+  useEffect(() => {
+    const loadSensors = async () => {
+      try {
+        const sensors = await apiService.getAllSensors();
+        setSensorsList(sensors);
+      } catch (err) {
+        console.error("Erreur chargement capteurs:", err);
+      }
+    };
+    loadSensors();
+  }, []);
+
+  // Fonction pour trouver le sensor_id correspondant à un room_id
+  const getSensorIdForRoom = useCallback((roomId) => {
+    // Chercher dans sensorRegistry (mapping local)
+    for (const [sensorId, mappedRoomId] of sensorRegistry.entries()) {
+      if (mappedRoomId === roomId) {
+        return sensorId;
+      }
+    }
+    // Chercher dans la liste des capteurs depuis l'API
+    const sensor = sensorsList.find(s => s.location === roomId);
+    return sensor?.sensor_id || null;
+  }, [sensorRegistry, sensorsList]);
+
   // Fonction pour charger l'historique (avec useCallback pour éviter les re-créations)
   const loadHistory = useCallback(async () => {
     setIsLoading(true);
@@ -67,9 +94,16 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
         limit: 1000, // Récupérer plus de données pour les graphiques
       };
 
-      // Si une salle spécifique est sélectionnée, filtrer par capteur
+      // Si une salle spécifique est sélectionnée, trouver le sensor_id correspondant
       if (selectedRoom !== "all") {
-        options.sensorId = selectedRoom;
+        const sensorId = getSensorIdForRoom(selectedRoom);
+        if (sensorId) {
+          options.sensorId = sensorId;
+          console.log(`📊 KPI: Salle ${selectedRoom} → Capteur ${sensorId}`);
+        } else {
+          console.warn(`⚠️ KPI: Aucun capteur trouvé pour la salle ${selectedRoom}`);
+          // Si pas de capteur trouvé, on ne filtre pas (affiche tout)
+        }
       }
 
       const data = await apiService.getSensorHistory(options);
@@ -93,7 +127,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDate, selectedRoom]);
+  }, [selectedDate, selectedRoom, getSensorIdForRoom]);
 
   // Charger l'historique depuis l'API quand les filtres changent
   useEffect(() => {
