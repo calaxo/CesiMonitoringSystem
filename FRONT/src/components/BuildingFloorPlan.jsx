@@ -295,37 +295,16 @@ export const BuildingFloorPlan = ({
         <div className="legend-item">
           <div
             className="legend-color"
-            style={{ backgroundColor: "#4a90e2" }}
+            style={{ backgroundColor: "#9e9e9e" }}
           />
-          <span>&lt; 15°C</span>
+          <span>N/A</span>
         </div>
         <div className="legend-item">
           <div
             className="legend-color"
-            style={{ backgroundColor: "#7ed321" }}
+            style={{ background: "linear-gradient(to right, hsl(240, 70%, 50%), hsl(180, 70%, 50%), hsl(120, 70%, 50%), hsl(60, 70%, 50%), hsl(0, 70%, 50%))", width: "80px" }}
           />
-          <span>15 - 18°C</span>
-        </div>
-        <div className="legend-item">
-          <div
-            className="legend-color"
-            style={{ backgroundColor: "#f5a623" }}
-          />
-          <span>18 - 22°C</span>
-        </div>
-        <div className="legend-item">
-          <div
-            className="legend-color"
-            style={{ backgroundColor: "#e74c3c" }}
-          />
-          <span>22 - 25°C</span>
-        </div>
-        <div className="legend-item">
-          <div
-            className="legend-color"
-            style={{ backgroundColor: "#c0392b" }}
-          />
-          <span>&gt; 25°C</span>
+          <span>10°C → 35°C</span>
         </div>
         <div className="legend-spacer"></div>
         <div className="legend-controls">
