@@ -74,3 +74,8 @@ mosquitto/data/mosquitto.db
 /mosquitto/data
 /ARDUINO/lora-secure-link-main
 mosquitto/data/mosquitto.db
+<<<<<<< Updated upstream
+=======
+mosquitto/data/mosquitto.db
+/mosquitto/data
+>>>>>>> Stashed changes

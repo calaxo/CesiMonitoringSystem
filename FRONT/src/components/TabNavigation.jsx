@@ -10,25 +10,25 @@ export const TabNavigation = () => {
         className={`tab-button ${activeTab === "dashboard" ? "active" : ""}`}
         onClick={() => setActiveTab("dashboard")}
       >
-        🏠 Tableau de Bord
+        Tableau de Bord
       </button>
       <button
         className={`tab-button ${activeTab === "kpi" ? "active" : ""}`}
         onClick={() => setActiveTab("kpi")}
       >
-        📊 Statistiques KPI
+        Statistiques KPI
       </button>
       <button
         className={`tab-button ${activeTab === "sensors" ? "active" : ""}`}
         onClick={() => setActiveTab("sensors")}
       >
-        🔗 Configuration Capteurs
+        Configuration Capteurs
       </button>
       <button
         className={`tab-button ${activeTab === "simulation" ? "active" : ""}`}
         onClick={() => setActiveTab("simulation")}
       >
-        🎮 Simulation
+        Simulation
       </button>
     </div>
   );

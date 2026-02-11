@@ -25,7 +25,7 @@ async function initDatabase() {
   let conn;
   try {
     conn = await pool.getConnection();
-    console.log("✅ Connexion à MariaDB établie");
+    console.log("Connexion à MariaDB établie");
 
     // Créer la table des capteurs (cartes Arduino émettrices)
     await conn.query(`
@@ -38,7 +38,7 @@ async function initDatabase() {
         INDEX idx_sensor_id (sensor_id)
       )
     `);
-    console.log("✅ Table sensors prête");
+    console.log("Table sensors prête");
 
     // Créer la table des données de capteurs
     await conn.query(`
@@ -53,10 +53,10 @@ async function initDatabase() {
         INDEX idx_received_at (received_at)
       )
     `);
-    console.log("✅ Table sensor_data prête");
+    console.log("Table sensor_data prête");
 
   } catch (err) {
-    console.error("❌ Erreur de connexion à MariaDB:", err.message);
+    console.error("Erreur de connexion à MariaDB:", err.message);
     throw err;
   } finally {
     if (conn) conn.release();

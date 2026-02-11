@@ -35,6 +35,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
 
   const { floorPlans, selectedFloor, globalStats, sensorRegistry } = useBuildingStore();
 
+
   // Sauvegarder les sélections dans localStorage
   useEffect(() => {
     localStorage.setItem("kpi_period", selectedPeriod);
@@ -78,6 +79,23 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
     return sensor?.sensor_id || null;
   }, [sensorRegistry, sensorsList]);
 
+
+  // Charger la liste des capteurs au montage
+  useEffect(() => {
+    const loadSensors = async () => {
+      try {
+        const sensors = await apiService.getAllSensors();
+        setSensorsList(sensors);
+      } catch (err) {
+        console.error("Erreur chargement capteurs:", err);
+      }
+    };
+    loadSensors();
+  }, []);
+
+
+
+
   // Fonction pour charger l'historique (avec useCallback pour éviter les re-créations)
   const loadHistory = useCallback(async () => {
     setIsLoading(true);
@@ -99,9 +117,11 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
         const sensorId = getSensorIdForRoom(selectedRoom);
         if (sensorId) {
           options.sensorId = sensorId;
-          console.log(`📊 KPI: Salle ${selectedRoom} → Capteur ${sensorId}`);
+
+          console.log(`stats: Salle ${selectedRoom} → Capteur ${sensorId}`);
         } else {
-          console.warn(`⚠️ KPI: Aucun capteur trouvé pour la salle ${selectedRoom}`);
+          console.warn(`stats: Aucun capteur trouvé pour la salle ${selectedRoom}`);
+
           // Si pas de capteur trouvé, on ne filtre pas (affiche tout)
         }
       }
@@ -152,11 +172,11 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
 
     const intervalMs = getRefreshInterval();
     console.log(
-      `⏰ Auto-refresh KPI configuré: toutes les ${intervalMs / 1000}s`,
+      `Auto-refresh stats configuré: toutes les ${intervalMs / 1000}s`,
     );
 
     const interval = setInterval(() => {
-      console.log(`🔄 Rafraîchissement auto KPI (${selectedPeriod})`);
+      console.log(`Rafraîchissement auto KPI (${selectedPeriod})`);
       loadHistory();
     }, intervalMs);
 
@@ -282,7 +302,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
             disabled={isLoading}
             title="Rafraîchir maintenant"
           >
-            🔄
+            Actualiser
           </button>
           {onFullscreen && !isFullscreen && (
             <button
@@ -495,7 +515,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
           {/* Statistiques Base de Données */}
           {globalStats && (
             <div className="stats-summary database-stats">
-              <h3>📊 Statistiques Base de Données</h3>
+              <h3>Statistiques Base de Données</h3>
               <div className="summary-items">
                 <div className="summary-item">
                   <strong>Capteurs enregistrés:</strong>

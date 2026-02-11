@@ -27,22 +27,14 @@ export const BuildingFloorPlan = ({
     // Si pas de température, retourner gris
     if (temp === null || temp === undefined) return "#9e9e9e"; // Gris
 
-    // Dégradé du bleu (froid) au rouge (chaud)
-    // Plage de température: 10°C (bleu) à 35°C (rouge)
-    const minTemp = 10;
-    const maxTemp = 35;
-
-    // Normaliser la température entre 0 et 1
-    const normalizedTemp = Math.max(
-      0,
-      Math.min(1, (temp - minTemp) / (maxTemp - minTemp)),
-    );
-
-    // Interpolation entre bleu et rouge via les teintes HSL
-    // Bleu = 240°, Rouge = 0° (on va de 240 vers 0)
-    const hue = 240 * (1 - normalizedTemp);
-
-    return `hsl(${hue}, 70%, 50%)`;
+    // Couleurs par plage de température
+    if (temp < 18) {
+      return "#3B82F6"; // Bleu (10-18°C)
+    } else if (temp < 24) {
+      return "#166534"; // Vert foncé (18-24°C)
+    } else {
+      return "#DC2626"; // Rouge (24°C et plus)
+    }
   };
 
   // Calculate canvas dimensions - ENLARGED
@@ -295,37 +287,30 @@ export const BuildingFloorPlan = ({
         <div className="legend-item">
           <div
             className="legend-color"
-            style={{ backgroundColor: "#4a90e2" }}
+            style={{ backgroundColor: "#9e9e9e" }}
           />
-          <span>&lt; 15°C</span>
+          <span>N/A</span>
         </div>
         <div className="legend-item">
           <div
             className="legend-color"
-            style={{ backgroundColor: "#7ed321" }}
+            style={{ backgroundColor: "#3B82F6" }}
           />
-          <span>15 - 18°C</span>
+          <span>&lt;18°C</span>
         </div>
         <div className="legend-item">
           <div
             className="legend-color"
-            style={{ backgroundColor: "#f5a623" }}
+            style={{ backgroundColor: "#166534" }}
           />
-          <span>18 - 22°C</span>
+          <span>18-24°C</span>
         </div>
         <div className="legend-item">
           <div
             className="legend-color"
-            style={{ backgroundColor: "#e74c3c" }}
+            style={{ backgroundColor: "#DC2626" }}
           />
-          <span>22 - 25°C</span>
-        </div>
-        <div className="legend-item">
-          <div
-            className="legend-color"
-            style={{ backgroundColor: "#c0392b" }}
-          />
-          <span>&gt; 25°C</span>
+          <span>&gt;24°C</span>
         </div>
         <div className="legend-spacer"></div>
         <div className="legend-controls">

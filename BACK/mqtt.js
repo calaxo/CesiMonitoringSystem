@@ -15,7 +15,7 @@ const HMAC_KEY = Buffer.from([0xCA, 0xFE, 0xBA, 0xBE, 0xDE, 0xAD, 0xBE, 0xEF,
  */
 function verifyHmac(payload) {
   if (!payload.hmac) {
-    console.warn("⚠️ Message sans HMAC");
+    console.warn("Message sans HMAC");
     return false;
   }
 
@@ -33,7 +33,7 @@ function verifyHmac(payload) {
   if (computedHmac === payload.hmac) {
     return true;
   } else {
-    console.warn(`⚠️ HMAC invalide!`);
+    console.warn(` HMAC invalide!`);
     console.warn(`   Message reconstruit: ${messageForHmac}`);
     console.warn(`   HMAC calculé: ${computedHmac}`);
     console.warn(`   HMAC reçu: ${payload.hmac}`);
@@ -69,16 +69,16 @@ async function initMQTT() {
     client = mqtt.connect(brokerUrl, options);
 
     client.on("connect", () => {
-      console.log("✅ Connecté au broker MQTT");
+      console.log("Connecté au broker MQTT");
 
       // S'abonner aux topics
       topics.forEach((topic) => {
         const trimmedTopic = topic.trim();
         client.subscribe(trimmedTopic, (err) => {
           if (err) {
-            console.error(`❌ Erreur abonnement au topic ${trimmedTopic}:`, err.message);
+            console.error(`Erreur abonnement au topic ${trimmedTopic}:`, err.message);
           } else {
-            console.log(`📡 Abonné au topic: ${trimmedTopic}`);
+            console.log(`Abonné au topic: ${trimmedTopic}`);
           }
         });
       });
@@ -89,20 +89,20 @@ async function initMQTT() {
     client.on("message", async (topic, message) => {
       try {
         const messageStr = message.toString();
-        console.log(`📨 Message reçu sur ${topic}: ${messageStr.substring(0, 100)}...`);
+        console.log(`Message reçu sur ${topic}: ${messageStr.substring(0, 100)}...`);
 
         // Parser le message JSON
         let payload;
         try {
           payload = JSON.parse(messageStr);
         } catch {
-          console.warn("⚠️ Message non-JSON ignoré:", messageStr.substring(0, 50));
+          console.warn("Message non-JSON ignoré:", messageStr.substring(0, 50));
           return;
         }
 
         // Vérifier que le message contient un sensor_id
         if (!payload.sensor_id) {
-          console.warn("⚠️ Message sans sensor_id ignoré");
+          console.warn("Message sans sensor_id ignoré");
           return;
         }
 
@@ -112,7 +112,7 @@ async function initMQTT() {
             console.warn(`⚠️ Message du capteur ${payload.sensor_id} rejeté (HMAC invalide)`);
             return;
           }
-          console.log(`✅ HMAC valide pour capteur ${payload.sensor_id}`);
+          console.log(`HMAC valide pour capteur ${payload.sensor_id}`);
         }
 
         // Mapper les champs courts vers les champs longs
@@ -126,30 +126,30 @@ async function initMQTT() {
 
         // Insérer dans la base de données
         await insertSensorData(normalizedPayload);
-        console.log(`💾 Données sauvegardées pour capteur ${payload.sensor_id} (T:${normalizedPayload.temperature}°C, M:${normalizedPayload.presence ? 'OUI' : 'NON'})`);
+        console.log(`Données sauvegardées pour capteur ${payload.sensor_id} (T:${normalizedPayload.temperature}°C, M:${normalizedPayload.presence ? 'OUI' : 'NON'})`);
 
       } catch (err) {
-        console.error("❌ Erreur traitement message MQTT:", err.message);
+        console.error("Erreur traitement message MQTT:", err.message);
       }
     });
 
     client.on("error", (err) => {
-      console.error("❌ Erreur MQTT:", err.message);
+      console.error("Erreur MQTT:", err.message);
       if (!client.connected) {
         reject(err);
       }
     });
 
     client.on("reconnect", () => {
-      console.log("🔄 Reconnexion MQTT...");
+      console.log("Reconnexion MQTT...");
     });
 
     client.on("offline", () => {
-      console.log("📴 MQTT hors ligne");
+      console.log("MQTT hors ligne");
     });
 
     client.on("close", () => {
-      console.log("🔌 Connexion MQTT fermée");
+      console.log("Connexion MQTT fermée");
     });
 
     // Timeout de connexion
@@ -202,7 +202,7 @@ async function closeMQTT() {
   return new Promise((resolve) => {
     if (client) {
       client.end(true, () => {
-        console.log("🔌 Connexion MQTT fermée proprement");
+        console.log("Connexion MQTT fermée proprement");
         client = null;
         resolve();
       });
