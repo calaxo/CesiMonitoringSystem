@@ -26,8 +26,8 @@ services:
       - "1883:1883"
     volumes:
       - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./mosquitto/data:/mosquitto/data
-      - ./mosquitto/log:/mosquitto/log
+      - mosquitto-data:/mosquitto/data
+      - mosquitt-log:/mosquitto/log
     restart: unless-stopped
     healthcheck:
       test:
@@ -79,3 +79,8 @@ services:
       PMA_USER: root
       PMA_PASSWORD: ${ROOT_PASSWORD}
       UPLOAD_LIMIT: 800M
+
+
+volumes:
+  mosquitto-data:
+  mosquitt-log:

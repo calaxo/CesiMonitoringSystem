@@ -34,6 +34,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
   const [sensorsList, setSensorsList] = useState([]);
 
   const { floorPlans, selectedFloor, globalStats, sensorRegistry } = useBuildingStore();
+  const { floorPlans, selectedFloor, globalStats, sensorRegistry } = useBuildingStore();
 
   // Sauvegarder les sélections dans localStorage
   useEffect(() => {
@@ -51,6 +52,32 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
   // Récupère les salles du plan sélectionné
   const currentFloor = floorPlans.find((f) => f.id === selectedFloor);
   const rooms = currentFloor?.rooms || [];
+
+  // Charger la liste des capteurs au montage
+  useEffect(() => {
+    const loadSensors = async () => {
+      try {
+        const sensors = await apiService.getAllSensors();
+        setSensorsList(sensors);
+      } catch (err) {
+        console.error("Erreur chargement capteurs:", err);
+      }
+    };
+    loadSensors();
+  }, []);
+
+  // Fonction pour trouver le sensor_id correspondant à un room_id
+  const getSensorIdForRoom = useCallback((roomId) => {
+    // Chercher dans sensorRegistry (mapping local)
+    for (const [sensorId, mappedRoomId] of sensorRegistry.entries()) {
+      if (mappedRoomId === roomId) {
+        return sensorId;
+      }
+    }
+    // Chercher dans la liste des capteurs depuis l'API
+    const sensor = sensorsList.find(s => s.location === roomId);
+    return sensor?.sensor_id || null;
+  }, [sensorRegistry, sensorsList]);
 
   // Charger la liste des capteurs au montage
   useEffect(() => {
@@ -282,7 +309,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
             disabled={isLoading}
             title="Rafraîchir maintenant"
           >
-            🔄
+            Actualiser
           </button>
           {onFullscreen && !isFullscreen && (
             <button
@@ -495,7 +522,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
           {/* Statistiques Base de Données */}
           {globalStats && (
             <div className="stats-summary database-stats">
-              <h3>📊 Statistiques Base de Données</h3>
+              <h3>Statistiques Base de Données</h3>
               <div className="summary-items">
                 <div className="summary-item">
                   <strong>Capteurs enregistrés:</strong>
