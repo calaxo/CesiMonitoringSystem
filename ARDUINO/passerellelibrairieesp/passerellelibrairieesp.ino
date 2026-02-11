@@ -482,6 +482,14 @@ unsigned long lastLcdUpdate = 0;
 
 void loop()
 {
+    // Mise à jour LCD si nécessaire
+    if (menuNeedsUpdate || (inSubMenu && millis() - lastLcdUpdate > 1000))
+    {
+        updateLCD();
+        menuNeedsUpdate = false;
+        lastLcdUpdate = millis();
+    }
+
     // Maintenir connexion MQTT
     if (wifiConnected && mqttConnected)
     {
