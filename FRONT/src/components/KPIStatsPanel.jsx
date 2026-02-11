@@ -99,9 +99,9 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
         const sensorId = getSensorIdForRoom(selectedRoom);
         if (sensorId) {
           options.sensorId = sensorId;
-          console.log(`📊 KPI: Salle ${selectedRoom} → Capteur ${sensorId}`);
+          console.log(`stats: Salle ${selectedRoom} → Capteur ${sensorId}`);
         } else {
-          console.warn(`⚠️ KPI: Aucun capteur trouvé pour la salle ${selectedRoom}`);
+          console.warn(`stats: Aucun capteur trouvé pour la salle ${selectedRoom}`);
           // Si pas de capteur trouvé, on ne filtre pas (affiche tout)
         }
       }
@@ -152,11 +152,11 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
 
     const intervalMs = getRefreshInterval();
     console.log(
-      `⏰ Auto-refresh KPI configuré: toutes les ${intervalMs / 1000}s`,
+      `Auto-refresh stats configuré: toutes les ${intervalMs / 1000}s`,
     );
 
     const interval = setInterval(() => {
-      console.log(`🔄 Rafraîchissement auto KPI (${selectedPeriod})`);
+      console.log(`Rafraîchissement auto KPI (${selectedPeriod})`);
       loadHistory();
     }, intervalMs);
 

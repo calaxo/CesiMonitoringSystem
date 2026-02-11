@@ -1,7 +1,7 @@
 const  FloorPlan = [
   {
     id: 'floor0',
-    name: 'Ground Floor (Niveau 0)',
+    name: 'Rez-de-chaussée (Niveau 0)',
     width: 200,
     height: 250,
     rooms: [
@@ -219,7 +219,7 @@ const  FloorPlan = [
   },
   {
     id: 'floor1',
-    name: 'First Floor (Niveau 1)',
+    name: 'Premier étage (Niveau 1)',
     width: 200,
     height: 200,
     rooms: [

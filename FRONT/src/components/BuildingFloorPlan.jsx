@@ -27,22 +27,14 @@ export const BuildingFloorPlan = ({
     // Si pas de température, retourner gris
     if (temp === null || temp === undefined) return "#9e9e9e"; // Gris
 
-    // Dégradé du bleu (froid) au rouge (chaud)
-    // Plage de température: 10°C (bleu) à 35°C (rouge)
-    const minTemp = 10;
-    const maxTemp = 35;
-
-    // Normaliser la température entre 0 et 1
-    const normalizedTemp = Math.max(
-      0,
-      Math.min(1, (temp - minTemp) / (maxTemp - minTemp)),
-    );
-
-    // Interpolation entre bleu et rouge via les teintes HSL
-    // Bleu = 240°, Rouge = 0° (on va de 240 vers 0)
-    const hue = 240 * (1 - normalizedTemp);
-
-    return `hsl(${hue}, 70%, 50%)`;
+    // Couleurs par plage de température
+    if (temp < 18) {
+      return "#3B82F6"; // Bleu (10-18°C)
+    } else if (temp < 24) {
+      return "#166534"; // Vert foncé (18-24°C)
+    } else {
+      return "#DC2626"; // Rouge (24°C et plus)
+    }
   };
 
   // Calculate canvas dimensions - ENLARGED
@@ -302,13 +294,23 @@ export const BuildingFloorPlan = ({
         <div className="legend-item">
           <div
             className="legend-color"
-            style={{
-              background:
-                "linear-gradient(to right, hsl(240, 70%, 50%), hsl(180, 70%, 50%), hsl(120, 70%, 50%), hsl(60, 70%, 50%), hsl(0, 70%, 50%))",
-              width: "80px",
-            }}
+            style={{ backgroundColor: "#3B82F6" }}
           />
-          <span>10°C → 35°C</span>
+          <span>&lt;18°C</span>
+        </div>
+        <div className="legend-item">
+          <div
+            className="legend-color"
+            style={{ backgroundColor: "#166534" }}
+          />
+          <span>18-24°C</span>
+        </div>
+        <div className="legend-item">
+          <div
+            className="legend-color"
+            style={{ backgroundColor: "#DC2626" }}
+          />
+          <span>&gt;24°C</span>
         </div>
         <div className="legend-spacer"></div>
         <div className="legend-controls">

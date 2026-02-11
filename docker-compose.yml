@@ -2,7 +2,6 @@ services:
   back:
     image: ghcr.io/calaxo/cesimonitoringsystem:latest
     container_name: hutc-back
-
     ports:
       - "5500:5500"
     restart: unless-stopped

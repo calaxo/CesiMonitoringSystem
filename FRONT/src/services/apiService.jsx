@@ -151,16 +151,7 @@ export async function updateSensor(sensorId, data) {
   });
 }
 
-/**
- * Publie un message MQTT via l'API
- * Utile pour envoyer des commandes depuis le frontend
- */
-export async function publishMQTT(topic, message) {
-  return fetchApi("/mqtt/publish", {
-    method: "POST",
-    body: JSON.stringify({ topic, message }),
-  });
-}
+
 
 /**
  * Mapping des sensor_id vers les room_id du plan
@@ -223,6 +214,5 @@ export default {
   getSensorData,
   getSensorHistory,
   updateSensor,
-  publishMQTT,
   mapSensorsToRooms,
 };

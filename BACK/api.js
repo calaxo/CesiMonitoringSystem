@@ -14,7 +14,7 @@ const router = express.Router();
 
 /**
  * GET /api/health
- * Vérifier l'état du serveur
+ * Vérifier l'état du serveur via l'api
  */
 router.get("/health", (req, res) => {
   const mqttClient = getClient();
@@ -56,7 +56,7 @@ router.get("/sensors", async (req, res) => {
       data: sanitizedData
     });
   } catch (err) {
-    console.error("Erreur API /sensors:", err);
+    console.error("Erreur API sur /sensors:", err);
     res.status(500).json({
       success: false,
       error: err.message
@@ -66,7 +66,7 @@ router.get("/sensors", async (req, res) => {
 
 /**
  * GET /api/sensors/latest
- * Récupérer les dernières données pour chaque capteur
+ * Récupérer les dernières données pour tout les capteurs
  */
 router.get("/sensors/latest", async (req, res) => {
   try {
@@ -94,7 +94,7 @@ router.get("/sensors/latest", async (req, res) => {
 
 /**
  * GET /api/sensors/latest/temperature
- * Récupérer les dernières températures pour chaque capteur
+ * Récupérer les dernières températures pour touts les capteurs
  */
 router.get("/sensors/latest/temperature", async (req, res) => {
   try {
@@ -122,7 +122,7 @@ router.get("/sensors/latest/temperature", async (req, res) => {
 
 /**
  * GET /api/sensors/latest/presence
- * Récupérer les dernières données de présence pour chaque capteur
+ * Récupérer les dernières données de présence pour touts les capteurs
  */
 router.get("/sensors/latest/presence", async (req, res) => {
   try {
@@ -150,7 +150,7 @@ router.get("/sensors/latest/presence", async (req, res) => {
 
 /**
  * GET /api/sensors/list
- * Récupérer la liste de tous les capteurs enregistrés
+ * Récupérer la liste de tous les capteurs qui ont été enregistres
  */
 router.get("/sensors/list", async (req, res) => {
   try {
@@ -177,7 +177,7 @@ router.get("/sensors/list", async (req, res) => {
 
 /**
  * PUT /api/sensors/:id
- * Mettre à jour les informations d'un capteur (nom, localisation)
+ * Mettre à jour les informations d'un capteur (nom, localisation) pour la page configuration capteurs
  */
 router.put("/sensors/:id", async (req, res) => {
   try {
@@ -199,7 +199,7 @@ router.put("/sensors/:id", async (req, res) => {
 
 /**
  * GET /api/sensors/stats
- * Récupérer les statistiques des capteurs
+ * Récupérer les statss d'un capteur
  */
 router.get("/sensors/stats", async (req, res) => {
   try {
@@ -252,36 +252,7 @@ router.get("/sensors/:id", async (req, res) => {
   }
 });
 
-/**
- * POST /api/mqtt/publish
- * Publier un message MQTT
- * Body: { topic: string, message: object|string }
- */
-router.post("/mqtt/publish", async (req, res) => {
-  try {
-    const { topic, message } = req.body;
 
-    if (!topic || !message) {
-      return res.status(400).json({
-        success: false,
-        error: "Les champs 'topic' et 'message' sont requis"
-      });
-    }
-
-    await publish(topic, message);
-    
-    res.json({
-      success: true,
-      message: "Message publié avec succès"
-    });
-  } catch (err) {
-    console.error("Erreur API /mqtt/publish:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
-  }
-});
 
 /**
  * Configure les routes API sur l'application Express
