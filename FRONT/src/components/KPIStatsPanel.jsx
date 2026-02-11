@@ -35,7 +35,10 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
 
   const { floorPlans, selectedFloor, globalStats, sensorRegistry } = useBuildingStore();
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   const { floorPlans, selectedFloor, globalStats, sensorRegistry } = useBuildingStore();
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 
@@ -83,6 +86,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
   }, [sensorRegistry, sensorsList]);
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   // Charger la liste des capteurs au montage
   useEffect(() => {
     const loadSensors = async () => {
@@ -111,6 +115,8 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
 
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
   // Fonction pour charger l'historique (avec useCallback pour éviter les re-créations)
   const loadHistory = useCallback(async () => {
     setIsLoading(true);
@@ -133,9 +139,15 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
         if (sensorId) {
           options.sensorId = sensorId;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
           console.log(`stats: Salle ${selectedRoom} → Capteur ${sensorId}`);
         } else {
           console.warn(`stats: Aucun capteur trouvé pour la salle ${selectedRoom}`);
+=======
+          console.log(`📊 KPI: Salle ${selectedRoom} → Capteur ${sensorId}`);
+        } else {
+          console.warn(`⚠️ KPI: Aucun capteur trouvé pour la salle ${selectedRoom}`);
+>>>>>>> Stashed changes
 =======
           console.log(`📊 KPI: Salle ${selectedRoom} → Capteur ${sensorId}`);
         } else {
