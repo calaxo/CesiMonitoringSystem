@@ -20,7 +20,6 @@
 #include "LoraTwoesp.h"
 #include "config.h"
 #include <LiquidCrystal.h>
-#include <LiquidCrystal.h>
 
 // ===============================
 // CONFIGURATION GATEWAY
@@ -469,6 +468,9 @@ void setup()
 
     Serial.println("[INIT] Gateway prête!");
     Serial.printf("[INIT] LoRa sur GPIO%d(RX)/GPIO%d(TX)\n", LORA_RX_PIN, LORA_TX_PIN);
+    
+    // Afficher le menu initial
+    menuNeedsUpdate = true;
 }
 
 // ===============================
@@ -480,22 +482,6 @@ unsigned long lastLcdUpdate = 0;
 
 void loop()
 {
-    // Mise à jour LCD si nécessaire
-    if (menuNeedsUpdate || (inSubMenu && millis() - lastLcdUpdate > 1000))
-    {
-        updateLCD();
-        menuNeedsUpdate = false;
-        lastLcdUpdate = millis();
-    }
-
-    // Mise à jour LCD si nécessaire
-    if (menuNeedsUpdate || (inSubMenu && millis() - lastLcdUpdate > 1000))
-    {
-        updateLCD();
-        menuNeedsUpdate = false;
-        lastLcdUpdate = millis();
-    }
-
     // Maintenir connexion MQTT
     if (wifiConnected && mqttConnected)
     {
