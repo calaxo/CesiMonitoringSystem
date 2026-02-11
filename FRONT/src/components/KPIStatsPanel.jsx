@@ -79,8 +79,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
     return sensor?.sensor_id || null;
   }, [sensorRegistry, sensorsList]);
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+
   // Charger la liste des capteurs au montage
   useEffect(() => {
     const loadSensors = async () => {
@@ -94,18 +93,7 @@ export const KPIStatsPanel = ({ onFullscreen, isFullscreen }) => {
     loadSensors();
   }, []);
 
-  // Fonction pour trouver le sensor_id correspondant à un room_id
-  const getSensorIdForRoom = useCallback((roomId) => {
-    // Chercher dans sensorRegistry (mapping local)
-    for (const [sensorId, mappedRoomId] of sensorRegistry.entries()) {
-      if (mappedRoomId === roomId) {
-        return sensorId;
-      }
-    }
-    // Chercher dans la liste des capteurs depuis l'API
-    const sensor = sensorsList.find(s => s.location === roomId);
-    return sensor?.sensor_id || null;
-  }, [sensorRegistry, sensorsList]);
+
 
 
   // Fonction pour charger l'historique (avec useCallback pour éviter les re-créations)
