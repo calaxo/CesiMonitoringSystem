@@ -27,7 +27,7 @@ services:
     volumes:
       - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
       - mosquitto-data:/mosquitto/data
-      - mosquitt-log:/mosquitto/log
+      - mosquitto-log:/mosquitto/log
     restart: unless-stopped
     healthcheck:
       test:
@@ -66,7 +66,7 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - /data/glpi/glpidb:/var/lib/mysql
+      - db-data:/var/lib/mysql
 
   phpmyadmin:
     image: phpmyadmin
@@ -80,7 +80,7 @@ services:
       PMA_PASSWORD: ${ROOT_PASSWORD}
       UPLOAD_LIMIT: 800M
 
-
 volumes:
   mosquitto-data:
-  mosquitt-log:
+  mosquitto-log:
+  db-data:
