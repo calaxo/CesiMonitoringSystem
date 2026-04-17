@@ -51,10 +51,20 @@ async function initMQTT() {
     const topics = (process.env.MQTT_TOPICS || "sensors/#").split(",");
 
     const options = {
-      clientId: process.env.MQTT_CLIENT_ID || `monitoring_server_${Date.now()}`,
-      clean: true,
+      clientId: process.env.MQTT_CLIENT_ID || "monitoring_server",
+      // Session persistante : le broker mémorise les abonnements et messages
+      // manqués si le serveur redémarre (QoS 1/2 uniquement)
+      clean: false,
       connectTimeout: 10000,
       reconnectPeriod: 5000,
+      // Last Will Testament : si le serveur se déconnecte brutalement,
+      // le broker publie ce message automatiquement
+      will: {
+        topic: "status/server",
+        payload: JSON.stringify({ status: "offline", ts: Date.now() }),
+        qos: 1,
+        retain: true,
+      },
     };
 
     // Authentification si configurée
@@ -71,14 +81,21 @@ async function initMQTT() {
     client.on("connect", () => {
       console.log("Connecté au broker MQTT");
 
-      // S'abonner aux topics
+      // Publier le statut "online" avec retain (dashboard sait que le serveur tourne)
+      client.publish(
+        "status/server",
+        JSON.stringify({ status: "online", ts: Date.now() }),
+        { qos: 1, retain: true }
+      );
+
+      // S'abonner aux topics avec QoS 1 (livraison garantie au moins une fois)
       topics.forEach((topic) => {
         const trimmedTopic = topic.trim();
-        client.subscribe(trimmedTopic, (err) => {
+        client.subscribe(trimmedTopic, { qos: 1 }, (err) => {
           if (err) {
             console.error(`Erreur abonnement au topic ${trimmedTopic}:`, err.message);
           } else {
-            console.log(`Abonné au topic: ${trimmedTopic}`);
+            console.log(`Abonné au topic: ${trimmedTopic} (QoS 1)`);
           }
         });
       });
@@ -175,7 +192,7 @@ function getClient() {
  * @param {object|string} message - Message à publier
  * @returns {Promise<void>}
  */
-async function publish(topic, message) {
+async function publish(topic, message, options = {}) {
   return new Promise((resolve, reject) => {
     if (!client || !client.connected) {
       reject(new Error("Client MQTT non connecté"));
@@ -183,8 +200,11 @@ async function publish(topic, message) {
     }
 
     const payload = typeof message === "string" ? message : JSON.stringify(message);
-    
-    client.publish(topic, payload, (err) => {
+
+    // Par défaut : QoS 1 (livraison garantie), retain false
+    const pubOptions = { qos: 1, retain: false, ...options };
+
+    client.publish(topic, payload, pubOptions, (err) => {
       if (err) {
         reject(err);
       } else {
