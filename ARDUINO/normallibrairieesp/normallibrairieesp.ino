@@ -9,6 +9,7 @@
  * 
  * Capteurs:
  *   - BME280 (I2C): Température, Humidité, Pression
+ *   - capteur PIR pour mouvements
  * 
  * Mode Deep Sleep disponible pour économie d'énergie
  */
@@ -16,7 +17,7 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
-#include "LoraTwo.h"
+#include "LoraTwoesp.h"
 #include <mbedtls/md.h>
 
 // ===============================
@@ -26,7 +27,7 @@
 #define NODE_ADDRESS 0x02
 #define GATEWAY_ADDRESS 0x00
 
-// Clé de chiffrement (DOIT être la même que la gateway!)
+// Clé de chiffrement de la librairie lroa  entre tout les diférents nodes en HEXA
 #define LORA_ENCRYPTION_KEY 0xCAFEBABE
 
 // Clé secrète HMAC (DOIT être la même que la gateway!)
@@ -41,7 +42,7 @@ const size_t HMAC_KEY_LEN = sizeof(HMAC_KEY);
 // Pin HC-SR501 (capteur mouvement PIR)
 #define HC_SR501_PIN 13
 
-// Pins LED Chainable (Grove v2.0)
+// Pins intégrées a l'ESP32
 #define LED_PIN 2   // LED intégrée ESP32
 
 // Intervalle d'envoi
@@ -56,10 +57,6 @@ const size_t HMAC_KEY_LEN = sizeof(HMAC_KEY);
 // ===============================
 LoraTwo net(NODE_ADDRESS);
 Adafruit_BME280 bme;
-
-// LED Chainable avec FastLED
-#define NUM_LEDS 1
-// CRGB leds[NUM_LEDS];  // Non utilisé avec LED intégrée
 
 // Variables pour la tâche de lecture capteurs
 TaskHandle_t sensorTaskHandle = NULL;
@@ -267,7 +264,7 @@ void loop()
 {
     unsigned long now = millis();
     
-    // Contrôler la LED selon le PIR en temps réel
+    // Contrôler la LED intégrée selon le PIR en temps réel
     digitalWrite(LED_PIN, digitalRead(HC_SR501_PIN) ? HIGH : LOW);
 
     // Envoi périodique

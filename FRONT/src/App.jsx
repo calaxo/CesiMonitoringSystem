@@ -80,7 +80,7 @@ function App() {
             disabled={isApiLoading}
             title="Rafraîchir les données"
           >
-            actualiser
+            Actualiser
           </button>
         </div>
       </header>

@@ -37,7 +37,7 @@ LiquidCrystal lcd(23, 27, 14, 19, 18, 5);
 int contrastPin = 25;
 
 // ===============================
-// BOUTONS GROVE
+// BOUTONS GROVE pour controller dans les menu
 // ===============================
 #define BTN_ENTER_PIN  32  // Bouton Entrer / Valider
 #define BTN_BACK_PIN   33  // Bouton Retour / Annuler
@@ -47,7 +47,7 @@ int contrastPin = 25;
 // Tâche boutons
 TaskHandle_t buttonTaskHandle = NULL;
 
-// États du menu
+// États du menu sur ecran LCD
 volatile int menuIndex = 0;
 volatile int subMenuIndex = 0;
 volatile bool inSubMenu = false;
@@ -133,6 +133,7 @@ void connectToWifi()
 
 #ifdef USE_STATIC_IP
     // Configuration IP statique (réseau sans DHCP)
+    //recup des infos depuis config.h dans le gitignore mais example présent si besoin
     IPAddress ip(IP_ADDRESS);
     IPAddress gateway(GATEWAY_IP);
     IPAddress subnet(SUBNET);
@@ -173,7 +174,7 @@ void connectToWifi()
 }
 
 // ===============================
-// CONNEXION MQTT
+// CONNEXION au mqtt mosquito dans docker sur le PC/serveur
 // ===============================
 void connectToMqtt()
 {
@@ -404,8 +405,8 @@ void buttonTask(void *parameter)
 void setup()
 {
     pinMode(contrastPin, OUTPUT);
-    analogWrite(contrastPin, 40); // valeur faible
-    lcd.begin(16, 2);
+    analogWrite(contrastPin, 40); // valeur faible contraste gerer par un pin de sortie pour pas s'emebeter avec résitance ou potar
+    lcd.begin(16, 2);               //initialistaion lcd comme arduino classique
     lcd.print("Gateway LoRa");
     lcd.setCursor(0, 1);
     lcd.print("Demarrage...");

@@ -39,7 +39,7 @@ export function getPeriodKey(timestamp, period) {
   return date.getTime();
 }
 
-// Calcule les KPI pour chaque période
+// Calcule les stats pour chaque période
 export function aggregateKPI(data, period) {
   const grouped = groupSensorDataByPeriod(data, period);
   const result = [];
